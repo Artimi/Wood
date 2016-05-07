@@ -62,9 +62,9 @@ def test_trade_highest_price_bid():
 
 def test_trade_multiple_orders():
     l = LimitOrderBook()
-    b_order1 = get_bid_order(price=100, quantity=100)
-    b_order2 = get_bid_order(price=110, quantity=50)
-    b_order3 = get_bid_order(price=120, quantity=150)
+    b_order1 = get_bid_order(order_id= 1, price=100, quantity=100)
+    b_order2 = get_bid_order(order_id=2, price=110, quantity=50)
+    b_order3 = get_bid_order(order_id=3, price=120, quantity=150)
     a_order1 = get_ask_order(price=100, quantity=350)
     l.add(b_order1)
     l.add(b_order2)
@@ -84,3 +84,13 @@ def test_trade_multiple_orders():
     assert len(l.ask_queue) == 1
     assert l.ask_queue.peek(0).quantity == 50
     assert l.ask_queue.peek(0).price == 100
+
+
+def test_cancel_order():
+    l = LimitOrderBook()
+    b_order1 = get_bid_order(order_id=123, participant=1)
+    l.add(b_order1)
+
+    assert len(l.bid_queue) == 1
+    l.cancel(123, 1)
+    assert len(l.bid_queue) == 0

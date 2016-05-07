@@ -16,6 +16,10 @@ class BasePriorityQueue(abc.ABC):
         """Return item on `index` position without poping."""
 
     @abc.abstractmethod
+    def peek_by_id(self, order_id):
+        """Get order with `order_id`"""
+
+    @abc.abstractmethod
     def get(self):
         """Pop first item."""
 
@@ -23,6 +27,3 @@ class BasePriorityQueue(abc.ABC):
     def remove(self, item):
         """Remove item from queue"""
 
-    @abc.abstractmethod
-    def remove_by_id(self, order_id):
-        """Remove order with `order_id`"""

@@ -9,23 +9,30 @@ class MemoryPriorityQueue(BasePriorityQueue):
     def __init__(self):
         super().__init__()
         self._queue = queue.PriorityQueue()
+        self._orders = {}
 
     def put(self, item):
+        if item.order_id in self._orders:
+            raise ValueError("Order with order_id %s is already present in queue.", item.order_id)
         self._queue.put(item)
+        self._orders[item.order_id] = item
 
     def peek(self, index):
         return self._queue.queue[index]
 
     def get(self):
-        return self._queue.get()
+        item = self._queue.get()
+        del self._orders[item.order_id]
+        return item
 
     def remove(self, item):
         self._queue.queue.remove(item)
 
-    def remove_by_id(self, order_id):
-        for elem in self._queue.queue:
-            if elem.order_id == order_id:
-                self.remove(elem)
+    def peek_by_id(self, order_id):
+        try:
+            return self._orders[order_id]
+        except KeyError:
+            return
 
     def __getattr__(self, item):
         return getattr(self._queue, item)

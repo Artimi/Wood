@@ -64,6 +64,20 @@ class LimitOrderBook:
             self.ask_queue.put(order)
         self.check_trade()
 
+    def cancel(self, order_id, participant):
+        self._cancel_from_queue(self.bid_queue, order_id, participant)
+        self._cancel_from_queue(self.ask_queue, order_id, participant)
+
+    @staticmethod
+    def _cancel_from_queue(queue, order_id, participant):
+        order = queue.peek_by_id(order_id)
+        if order is None:
+            return
+        if order.participant == participant:
+            queue.remove(order)
+        else:
+            logging.warning("Attempt to remove order %s of other participant by participant %s", order, participant)
+
     def check_trade(self):
         while not self.bid_queue.empty() and \
               not self.ask_queue.empty() and\
@@ -90,4 +104,3 @@ class LimitOrderBook:
     def __str__(self):
         trades = "\n".join(map(str, self.trades))
         return "BID\n{}\n\nASK\n{}\nTRADES\n{}".format(self.bid_queue, self.ask_queue, trades)
-
