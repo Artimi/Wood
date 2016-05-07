@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import logging
 import json
+import logging
 
 from functools import partial
-
 from public_server import PublicClients, PublicServerProtocol
-
+from voluptuous import Schema, Invalid, Any
 
 LOGGING_PROPERTIES = {
     "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -17,6 +16,19 @@ LOGGING_PROPERTIES = {
 logging.basicConfig(**LOGGING_PROPERTIES)
 
 LOCALHOST = '127.0.0.1'
+
+message_schema = Schema(Any(
+    {
+        "message": "createOrder",
+        "orderId": int,
+        "side": Any("BUY", "SELL"),
+        "price": int,
+        "quantity": int
+    },
+    {
+        "message": "cancelOrder",
+        "orderId": int,
+    }, required=True))
 
 
 class StockServer:
@@ -35,21 +47,30 @@ class StockServer:
             addr = writer.get_extra_info("peername")
             logging.debug("Received %r from %r" % (message, addr))
             try:
-                order = json.loads(message)
+                json_message = json.loads(message)
             except ValueError:
                 response = "Message '{}' is not valid json.".format(message)
-            else:
-                response = "OK"
+                await self.respond(writer, response)
+                continue
+            try:
+                message_schema(json_message)
+            except Invalid as e:
+                response = "Message '{}' is not valid order message because {}.".format(message, e)
+                await self.respond(writer, response)
+                continue
 
-
-            logging.debug("Send: %r" % response)
-            writer.write(response.encode())
-            await writer.drain()
+            response = "OK"
+            await self.respond(writer, response)
 
             self.public_clients.broadcast(response)
 
         logging.debug("Close the client socket")
         writer.close()
+
+    async def respond(self, writer, response):
+        logging.debug("Send: %r" % response)
+        writer.write(response.encode())
+        await writer.drain()
 
     def run(self):
         loop = asyncio.get_event_loop()
