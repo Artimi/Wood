@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 
-import functools
-import queue
 from collections import namedtuple
+from .priority_queue import BasePriorityQueue
 
 
 class BidOrder(namedtuple('BidOrder', 'order_id participant time price quantity')):
@@ -13,9 +12,6 @@ class BidOrder(namedtuple('BidOrder', 'order_id participant time price quantity'
 
     def __le__(self, other):
         return (self.price, self.time) <= (other.price, other.time)
-
-    def __eq__(self, other):
-        return (self.price, self.time) == (other.price, other.time)
 
     def __ge__(self, other):
         return (self.price, self.time) >= (other.price, other.time)
@@ -33,9 +29,6 @@ class AskOrder(namedtuple('AskOrder', 'order_id participant time price quantity'
     def __le__(self, other):
         return (self.price > other.price) or (self.price == other.price and self.time < other.time) or self.__eq__(other)
 
-    def __eq__(self, other):
-        return (self.price, self.time) == (other.price, other.time)
-
     def __ge__(self, other):
         return (self.price < other.price) or (self.price == other.price and self.time > other.time) or self.__eq__(other)
 
@@ -44,9 +37,9 @@ class AskOrder(namedtuple('AskOrder', 'order_id participant time price quantity'
 
 
 class LimitOrderBook:
-    def __init__(self):
-        self.bid_queue = queue.PriorityQueue()
-        self.ask_queue = queue.PriorityQueue()
+    def __init__(self, PriorityQueue):
+        self.bid_queue = PriorityQueue()
+        self.ask_queue = PriorityQueue()
 
     def add(self, order):
         if isinstance(order, BidOrder):
