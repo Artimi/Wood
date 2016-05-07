@@ -2,6 +2,7 @@
 
 import queue
 from .base_priority_queue import BasePriorityQueue
+from tabulate import tabulate
 
 
 class MemoryPriorityQueue(BasePriorityQueue):
@@ -31,3 +32,11 @@ class MemoryPriorityQueue(BasePriorityQueue):
 
     def __len__(self):
         return self._queue.qsize()
+
+    def __iter__(self):
+        return self._queue.queue.__iter__()
+
+    def __str__(self):
+        table = [(order.price, order.participant, order.quantity) for order in self]
+        return tabulate(table, headers=["Price", "Participant", "Quantity"])
+

@@ -2,6 +2,7 @@
 
 from wood.limit_order_book import BidOrder
 from wood.priority_queue import MemoryPriorityQueue
+from .utils import get_bid_order
 
 
 def test_put():
@@ -45,13 +46,9 @@ def test_remove():
 
 def test_remove_by_id():
     q = MemoryPriorityQueue()
-    order1 = BidOrder(1, 1, 2.5, 100, 50)
-    order2 = BidOrder(2, 1, 2.5, 200, 50)
-    order3 = BidOrder(3, 1, 2.5, 300, 50)
-    q.put(order1)
-    q.put(order2)
-    q.put(order3)
+    for i in range(1, 4):
+        q.put(get_bid_order(order_id=i, price=i*100))
 
     q.remove_by_id(2)
-    assert q.get() == order1
-    assert q.get() == order3
+    assert q.get().order_id == 3
+    assert q.get().order_id == 1
