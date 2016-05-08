@@ -20,6 +20,8 @@ def test_trade():
     a_order1 = get_ask_order(price=100, quantity=50)
     l.add(b_order1)
     l.add(a_order1)
+    for trade in l.check_trades():
+        pass
     assert len(l.trades) == 1
     assert l.trades[0].price == 100
     assert l.trades[0].quantity == 50
@@ -35,6 +37,8 @@ def test_trade_higher_quantity_ask():
     a_order1 = get_ask_order(price=100, quantity=70)
     l.add(b_order1)
     l.add(a_order1)
+    for trade in l.check_trades():
+        pass
     assert len(l.trades) == 1
     assert l.trades[0].price == 100
     assert l.trades[0].quantity == 50
@@ -51,6 +55,8 @@ def test_trade_highest_price_bid():
     a_order1 = get_ask_order(price=100, quantity=50)
     l.add(b_order1)
     l.add(a_order1)
+    for trade in l.check_trades():
+        pass
     assert len(l.trades) == 1
     assert l.trades[0].price == 120
     assert l.trades[0].quantity == 50
@@ -70,6 +76,8 @@ def test_trade_multiple_orders():
     l.add(b_order2)
     l.add(b_order3)
     l.add(a_order1)
+    for trade in l.check_trades():
+        pass
     assert len(l.trades) == 3
 
     assert l.trades[0].price == 120

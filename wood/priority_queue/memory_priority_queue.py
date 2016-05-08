@@ -13,7 +13,7 @@ class MemoryPriorityQueue(BasePriorityQueue):
 
     def put(self, item):
         if item.order_id in self._orders:
-            raise ValueError("Order with order_id %s is already present in queue.", item.order_id)
+            raise ValueError("Order with order_id %s is already present in queue." % item.order_id)
         self._queue.put(item)
         self._orders[item.order_id] = item
 

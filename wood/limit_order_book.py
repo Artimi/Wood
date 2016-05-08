@@ -2,7 +2,7 @@
 
 import logging
 
-import datetime
+import time
 from wood.priority_queue import MemoryPriorityQueue
 from collections import namedtuple
 
@@ -62,7 +62,6 @@ class LimitOrderBook:
             self.bid_queue.put(order)
         elif isinstance(order, AskOrder):
             self.ask_queue.put(order)
-        self.check_trade()
 
     def cancel(self, order_id, participant):
         self._cancel_from_queue(self.bid_queue, order_id, participant)
@@ -78,7 +77,7 @@ class LimitOrderBook:
         else:
             logging.warning("Attempt to remove order %s of other participant by participant %s", order, participant)
 
-    def check_trade(self):
+    def check_trades(self):
         while not self.bid_queue.empty() and \
               not self.ask_queue.empty() and\
               self.bid_queue.peek(0).price >= self.ask_queue.peek(0).price:
@@ -99,7 +98,9 @@ class LimitOrderBook:
             else:
                 quantity = bid_order.quantity
             logging.info("Traded %s with %s", bid_order, ask_order)
-            self.trades.append(Trade(datetime.datetime.now(), price, quantity, bid_order, ask_order))
+            trade = Trade(time.time(), price, quantity, bid_order, ask_order)
+            self.trades.append(trade)
+            yield trade
 
     def __str__(self):
         trades = "\n".join(map(str, self.trades))

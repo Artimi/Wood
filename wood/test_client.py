@@ -19,9 +19,10 @@ def tcp_echo_client(message, loop, port):
 
     print("Send: %r" % message)
     writer.write(message.encode())
-
-    data = yield from reader.read(100)
-    print("Received: %r" % data.decode())
+    data = True
+    while data:
+        data = yield from reader.read(1000)
+        print("Received: %r" % data.decode())
 
     print("Close the socket")
     writer.close()
