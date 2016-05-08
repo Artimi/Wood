@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+import json
 import logging
 
 from functools import partial
-from public_server import Clients, PublicServerProtocol, PrivateServerProtocol
-from stock_exchange import StockExchange
+from .stock_exchange import StockExchange
 
 LOGGING_PROPERTIES = {
     "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
@@ -14,16 +14,14 @@ LOGGING_PROPERTIES = {
 }
 logging.basicConfig(**LOGGING_PROPERTIES)
 
-LOCALHOST = '127.0.0.1'
-
 
 class StockServer:
-    def __init__(self, private_port=7001, public_port=7002):
+    def __init__(self, private_port=7001, public_port=7002, loop=None):
         self.public_clients = Clients()
         self.private_clients = Clients()
         self.public_port = public_port
         self.private_port = private_port
-        self.loop = asyncio.get_event_loop()
+        self.loop = asyncio.get_event_loop() if loop is None else loop
         self.public_queue = asyncio.Queue(loop=self.loop)
         self.private_queue = asyncio.Queue(loop=self.loop)
         self.stock_exchange = StockExchange(self.private_queue, self.public_queue)
@@ -40,35 +38,89 @@ class StockServer:
             participant, message = yield from self.private_queue.get()
             self.private_clients.send(participant, message)
 
-    def run(self):
+    def initialize_tasks(self):
         public_protocol = partial(PublicServerProtocol, self.public_clients)
         private_protocol = partial(PrivateServerProtocol, self.private_clients, self.stock_exchange)
         public_server_coro = self.loop.create_server(public_protocol, port=self.public_port)
         private_server_coro = self.loop.create_server(private_protocol, port=self.private_port)
-        public_server = self.loop.run_until_complete(public_server_coro)
-        private_server = self.loop.run_until_complete(private_server_coro)
-        send_public = self.loop.create_task(self.send_public())
-        send_private = self.loop.create_task(self.send_private())
+        self.public_server = self.loop.run_until_complete(public_server_coro)
+        self.private_server = self.loop.run_until_complete(private_server_coro)
+        self.send_public_coro = self.loop.create_task(self.send_public())
+        self.send_private_coro = self.loop.create_task(self.send_private())
 
-        logging.info("Serving public on %s.", public_server.sockets[0].getsockname())
-        logging.info("Serving private on %s.", private_server.sockets[0].getsockname())
+        logging.info("Serving public on %s.", self.public_server.sockets[0].getsockname())
+        logging.info("Serving private on %s.", self.private_server.sockets[0].getsockname())
+
+    def shutdown_tasks(self):
+        self.public_server.close()
+        self.private_server.close()
+        self.send_public_coro.cancel()
+        self.send_private_coro.cancel()
+        self.loop.run_until_complete(self.public_server.wait_closed())
+        self.loop.run_until_complete(self.private_server.wait_closed())
+        self.loop.close()
+        logging.info("Server shutdown.")
+
+    def run(self):
+        self.initialize_tasks()
         try:
             self.loop.run_forever()
         except KeyboardInterrupt:
             pass
-
-        public_server.close()
-        private_server.close()
-        send_public.cancel()
-        send_private.cancel()
-        self.loop.run_until_complete(public_server.wait_closed())
-        self.loop.run_until_complete(private_server.wait_closed())
-        self.loop.close()
+        self.shutdown_tasks()
 
 
-def main():
-    stock_server = StockServer()
-    stock_server.run()
+class Clients:
+    def __init__(self):
+        self._clients = {}
 
-if __name__ == '__main__':
-    main()
+    def add(self, client):
+        self._clients[client.peername] = client
+
+    def remove(self, client):
+        del self._clients[client.peername]
+
+    def broadcast(self, message):
+        if isinstance(message, dict):
+            message = json.dumps(message)
+        message = message + "\n"
+        for participant, client in self._clients.items():
+            logging.debug("Broadcast %r to %s", message, participant)
+            client.transport.write(message.encode())
+
+    def send(self, participant, message):
+        """
+        Send message to participant. May raise `KeyError` if participant already left.
+        """
+        client = self._clients[participant]
+        if isinstance(message, dict):
+            message = json.dumps(message)
+        message = message + "\n"
+        logging.debug("Send %r to %s", message, participant)
+        client.transport.write(message.encode())
+
+
+class PublicServerProtocol(asyncio.Protocol):
+    def __init__(self, clients):
+        self._clients = clients
+
+    def connection_made(self, transport):
+        self.transport = transport
+        self.peername = transport.get_extra_info("peername")
+        logging.debug("Connection made %s", self.peername)
+        self._clients.add(self)
+
+    def connection_lost(self, exc):
+        logging.debug("Connection lost %s", self.peername)
+        self._clients.remove(self)
+
+
+class PrivateServerProtocol(PublicServerProtocol):
+    def __init__(self, clients, stock_exchange):
+        super().__init__(clients)
+        self._stock_exchange = stock_exchange
+
+    def data_received(self, data):
+        message = data.decode()
+        logging.debug("Received %r from %r" % (message, self.peername))
+        self._stock_exchange.handle_order(message, self.peername)

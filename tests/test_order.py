@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-from wood.limit_order_book import BidOrder, AskOrder
 from .utils import get_ask_order, get_bid_order
 
 

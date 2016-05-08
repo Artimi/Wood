@@ -3,7 +3,7 @@
 import logging
 
 import time
-from wood.priority_queue import MemoryPriorityQueue
+from .priority_queue import MemoryPriorityQueue
 from collections import namedtuple
 
 

@@ -4,7 +4,7 @@ import json
 from voluptuous import Schema, Any, Invalid
 import logging
 
-from limit_order_book import LimitOrderBook, BidOrder, AskOrder
+from .limit_order_book import LimitOrderBook, BidOrder, AskOrder
 
 message_schema = Schema(Any(
     {
@@ -97,13 +97,13 @@ class StockExchange:
         try:
             order_dict = json.loads(message)
         except ValueError:
-            message = "Message '{}' is not valid json.".format(message)
-            self._private_queue.put_nowait((participant, message))
+            error_report = self._get_error_report("Message '{}' is not valid json.".format(message))
+            self._private_queue.put_nowait((participant, error_report))
             return None
         try:
             message_schema(order_dict)
         except Invalid as e:
-            message = "Message '{}' is not valid order message because {}.".format(message, e)
-            self._private_queue.put_nowait((participant, message))
+            error_report = self._get_error_report("Message '{}' is not valid order message because {}.".format(message, e))
+            self._private_queue.put_nowait((participant, error_report))
             return None
         return order_dict
