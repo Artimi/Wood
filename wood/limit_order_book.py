@@ -10,6 +10,7 @@ from collections import namedtuple
 class BidOrder(namedtuple('BidOrder', 'order_id participant time price quantity')):
     """BUY Order"""
     __slots__ = ()
+    side = "bid"
 
     def __lt__(self, other):
         return (self.price > other.price) or (self.price == other.price and self.time < other.time)
@@ -26,10 +27,10 @@ class BidOrder(namedtuple('BidOrder', 'order_id participant time price quantity'
         return (self.price < other.price) or (self.price == other.price and self.time > other.time)
 
 
-
 class AskOrder(namedtuple('AskOrder', 'order_id participant time price quantity')):
     """SELL Order"""
     __slots__ = ()
+    side = "ask"
 
     def __lt__(self, other):
         return (self.price, self.time) < (other.price, other.time)
@@ -63,19 +64,18 @@ class LimitOrderBook:
         elif isinstance(order, AskOrder):
             self.ask_queue.put(order)
 
-    def cancel(self, order_id, participant):
-        self._cancel_from_queue(self.bid_queue, order_id, participant)
-        self._cancel_from_queue(self.ask_queue, order_id, participant)
+    def cancel(self, order_id):
+        return self._cancel_from_queue(self.bid_queue, order_id) or self._cancel_from_queue(self.ask_queue, order_id)
 
     @staticmethod
-    def _cancel_from_queue(queue, order_id, participant):
+    def _cancel_from_queue(queue, order_id):
+        logging.debug("Cancelling order %s", order_id)
         order = queue.peek_by_id(order_id)
         if order is None:
-            return
-        if order.participant == participant:
-            queue.remove(order)
-        else:
-            logging.warning("Attempt to remove order %s of other participant by participant %s", order, participant)
+            return False
+        # Here could be some test to check that participant has right to cancel order
+        queue.remove(order)
+        return True
 
     def check_trades(self):
         while not self.bid_queue.empty() and \

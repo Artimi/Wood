@@ -63,6 +63,16 @@ class StockExchange:
         return result
 
     @staticmethod
+    def _get_order_book_report(side, price, quantity):
+        result = {
+            "type": "orderbook",
+            "side": side,
+            "price": price,
+            "quantity": quantity
+        }
+        return result
+
+    @staticmethod
     def _get_error_report(error):
         result = {
             "error": error
@@ -82,6 +92,7 @@ class StockExchange:
                 return
             new_report = self._get_execution_report(order_dict["orderId"], "NEW")
             self._private_queue.put_nowait((participant, new_report))
+            self._public_queue.put_nowait(self._get_order_book_report(order.side, order.price, order.quantity))
             for trade in self.limit_order_book.check_trades():
                 bid_fill_report = self._get_fill_report(trade, trade.bid_order)
                 self._private_queue.put_nowait((trade.bid_order.participant, bid_fill_report))
@@ -91,7 +102,12 @@ class StockExchange:
             logging.debug(self.limit_order_book)
 
         elif order_dict["message"] == "cancelOrder":
-            self.limit_order_book.cancel(order_dict["orderId"], participant)
+            if self.limit_order_book.cancel(order_dict["orderId"]):
+                cancel_report = self._get_execution_report(order_dict["orderId"], "CANCELLED")
+                self._private_queue.put_nowait((participant, cancel_report))
+            else:
+                error_report = self._get_error_report("OrderId {} was not in our database.".format(order_dict["orderId"]))
+                self._private_queue.put_nowait((participant, error_report))
 
     def validate_message(self, message, participant):
         try:

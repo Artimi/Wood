@@ -96,9 +96,9 @@ def test_trade_multiple_orders():
 
 def test_cancel_order():
     l = LimitOrderBook()
-    b_order1 = get_bid_order(order_id=123, participant=1)
+    b_order1 = get_bid_order(order_id=123)
     l.add(b_order1)
 
     assert len(l.bid_queue) == 1
-    l.cancel(123, 1)
+    l.cancel(123)
     assert len(l.bid_queue) == 0
