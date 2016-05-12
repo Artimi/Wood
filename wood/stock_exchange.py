@@ -1,23 +1,30 @@
 # -*- coding: utf-8 -*-
 import time
 import json
-from voluptuous import Schema, Any, Invalid
+from voluptuous import Schema, Any, Invalid, All, Range
 import logging
 
-from .limit_order_book import LimitOrderBook, BidOrder, AskOrder
+from .limit_order_book import LimitOrderBook, BidOrder, AskOrder, MarketBidOrder, MarketAskOrder
 
 message_schema = Schema(Any(
     {
         "message": "createOrder",
         "orderId": int,
         "side": Any("BUY", "SELL"),
-        "price": int,
-        "quantity": int
+        "price": All(int, Range(min=0)),
+        "quantity": All(int, Range(min=0)),
     },
     {
         "message": "cancelOrder",
         "orderId": int,
-    }, required=True))
+    },
+    {
+        "message": "marketOrder",
+        "orderId": int,
+        "side": Any("BUY", "SELL"),
+        "quantity": All(int, Range(min=0)),
+    },
+    required=True))
 
 
 class StockExchange:
@@ -27,16 +34,22 @@ class StockExchange:
         self.limit_order_book = LimitOrderBook()
 
     def create_order(self, order_dict, participant):
-        if order_dict["side"] == "BUY":
-            Order = BidOrder
-        elif order_dict["side"] == "SELL":
-            Order = AskOrder
-        else:
-            raise ValueError("Unknown side %s.", order_dict["side"])
+        order_types = {
+            "BUY": {
+                "createOrder": BidOrder,
+                "marketOrder": MarketBidOrder,
+            },
+            "SELL": {
+                "createOrder": AskOrder,
+                "marketOrder": MarketAskOrder,
+            }
+        }
+        Order = order_types[order_dict["side"]][order_dict["message"]]
+        price = -1 if order_dict["message"] == "marketOrder" else order_dict["price"]
         return Order(order_dict["orderId"],
                      participant,
                      time.time(),
-                     order_dict["price"],
+                     price,
                      order_dict["quantity"])
 
     @staticmethod
@@ -83,31 +96,36 @@ class StockExchange:
         order_dict = self.validate_message(message, participant)
         if order_dict is None:
             return
-        if order_dict["message"] == "createOrder":
-            order = self.create_order(order_dict, participant)
-            try:
-                self.limit_order_book.add(order)
-            except ValueError as e:
-                self._private_queue.put_nowait((participant, self._get_error_report(str(e))))
-                return
-            new_report = self._get_execution_report(order_dict["orderId"], "NEW")
-            self._private_queue.put_nowait((participant, new_report))
-            self._public_queue.put_nowait(self._get_order_book_report(order.side, order.price, order.quantity))
-            for trade in self.limit_order_book.check_trades():
-                bid_fill_report = self._get_fill_report(trade, trade.bid_order)
-                self._private_queue.put_nowait((trade.bid_order.participant, bid_fill_report))
-                ask_fill_report = self._get_fill_report(trade, trade.ask_order)
-                self._private_queue.put_nowait((trade.ask_order.participant, ask_fill_report))
-                self._public_queue.put_nowait(self._get_trade_report(trade))
-            logging.debug(self.limit_order_book)
-
+        if order_dict["message"] in ("createOrder", "marketOrder"):
+            self._handle_create_order(order_dict, participant)
         elif order_dict["message"] == "cancelOrder":
-            if self.limit_order_book.cancel(order_dict["orderId"]):
-                cancel_report = self._get_execution_report(order_dict["orderId"], "CANCELLED")
-                self._private_queue.put_nowait((participant, cancel_report))
-            else:
-                error_report = self._get_error_report("OrderId {} was not in our database.".format(order_dict["orderId"]))
-                self._private_queue.put_nowait((participant, error_report))
+            self._handle_cancel_order(order_dict, participant)
+
+    def _handle_create_order(self, order_dict, participant):
+        order = self.create_order(order_dict, participant)
+        try:
+            self.limit_order_book.add(order)
+        except ValueError as e:
+            self._private_queue.put_nowait((participant, self._get_error_report(str(e))))
+            return
+        new_report = self._get_execution_report(order_dict["orderId"], "NEW")
+        self._private_queue.put_nowait((participant, new_report))
+        self._public_queue.put_nowait(self._get_order_book_report(order.side, order.price, order.quantity))
+        for trade in self.limit_order_book.check_trades():
+            bid_fill_report = self._get_fill_report(trade, trade.bid_order)
+            self._private_queue.put_nowait((trade.bid_order.participant, bid_fill_report))
+            ask_fill_report = self._get_fill_report(trade, trade.ask_order)
+            self._private_queue.put_nowait((trade.ask_order.participant, ask_fill_report))
+            self._public_queue.put_nowait(self._get_trade_report(trade))
+        logging.debug(self.limit_order_book)
+
+    def _handle_cancel_order(self, order_dict, participant):
+        if self.limit_order_book.cancel(order_dict["orderId"]):
+            cancel_report = self._get_execution_report(order_dict["orderId"], "CANCELLED")
+            self._private_queue.put_nowait((participant, cancel_report))
+        else:
+            error_report = self._get_error_report("OrderId {} was not in our database.".format(order_dict["orderId"]))
+            self._private_queue.put_nowait((participant, error_report))
 
     def validate_message(self, message, participant):
         try:

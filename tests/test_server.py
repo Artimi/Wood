@@ -88,6 +88,7 @@ def test_order_id_must_be_unique(server):
     assert "error" in responses2[0]
     assert responses2[0]["error"] == "Order with order_id 1 is already present in queue."
 
+
 def test_cancel_order(server):
     loop = server.loop
     message = get_create_order()

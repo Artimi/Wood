@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from wood.limit_order_book import LimitOrderBook
-from .utils import get_bid_order, get_ask_order
+from .utils import get_bid_order, get_ask_order, get_market_bid_order, get_market_ask_order
 
 
 def test_add():
@@ -68,7 +68,7 @@ def test_trade_highest_price_bid():
 
 def test_trade_multiple_orders():
     l = LimitOrderBook()
-    b_order1 = get_bid_order(order_id= 1, price=100, quantity=100)
+    b_order1 = get_bid_order(order_id=1, price=100, quantity=100)
     b_order2 = get_bid_order(order_id=2, price=110, quantity=50)
     b_order3 = get_bid_order(order_id=3, price=120, quantity=150)
     a_order1 = get_ask_order(price=100, quantity=350)
@@ -102,3 +102,39 @@ def test_cancel_order():
     assert len(l.bid_queue) == 1
     l.cancel(123)
     assert len(l.bid_queue) == 0
+
+
+def test_market_order():
+    l = LimitOrderBook()
+    a_order = get_ask_order(quantity=100, price=100)
+    m_order = get_market_bid_order(order_id=2, quantity=150)
+    l.add(a_order)
+    l.add(m_order)
+    for trade in l.check_trades():
+        pass
+
+    assert len(l.trades) == 1
+    assert l.trades[0].price == 100
+    assert l.trades[0].quantity == 100
+    assert l.trades[0].bid_order == m_order
+    assert l.trades[0].ask_order == a_order
+    assert len(l.bid_queue) == 1
+    assert len(l.ask_queue) == 0
+
+
+def test_two_market_orders():
+    l = LimitOrderBook()
+    ma_order = get_market_ask_order(quantity=100)
+    mb_order = get_market_bid_order(order_id=2, quantity=100)
+    l.add(ma_order)
+    l.add(mb_order)
+    for trade in l.check_trades():
+        pass
+
+    assert len(l.trades) == 1
+    assert l.trades[0].price == 0
+    assert l.trades[0].quantity == 100
+    assert l.trades[0].bid_order == mb_order
+    assert l.trades[0].ask_order == ma_order
+    assert len(l.bid_queue) == 0
+    assert len(l.ask_queue) == 0
