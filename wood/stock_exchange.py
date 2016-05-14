@@ -5,6 +5,8 @@ from voluptuous import Schema, Any, Invalid, All, Range
 import logging
 
 from .limit_order_book import LimitOrderBook, BidOrder, AskOrder, MarketBidOrder, MarketAskOrder
+from .utils import get_logger
+
 
 message_schema = Schema(Any(
     {
@@ -32,6 +34,7 @@ class StockExchange:
         self._private_queue = private_queue
         self._public_queue = public_queue
         self.limit_order_book = LimitOrderBook()
+        self._logger = get_logger()
 
     def create_order(self, order_dict, participant):
         order_types = {
@@ -117,7 +120,7 @@ class StockExchange:
             ask_fill_report = self._get_fill_report(trade, trade.ask_order)
             self._private_queue.put_nowait((trade.ask_order.participant, ask_fill_report))
             self._public_queue.put_nowait(self._get_trade_report(trade))
-        logging.debug(self.limit_order_book)
+        self._logger.debug(self.limit_order_book)
 
     def _handle_cancel_order(self, order_dict, participant):
         if self.limit_order_book.cancel(order_dict["orderId"]):

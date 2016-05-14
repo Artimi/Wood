@@ -2,17 +2,10 @@
 
 import asyncio
 import json
-import logging
 
 from functools import partial
 from .stock_exchange import StockExchange
-
-LOGGING_PROPERTIES = {
-    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    # "filename": config.LOG_DELETER,
-    "level": logging.DEBUG,
-}
-logging.basicConfig(**LOGGING_PROPERTIES)
+from .utils import get_logger
 
 
 class StockServer:
@@ -25,6 +18,7 @@ class StockServer:
         self.public_queue = asyncio.Queue(loop=self.loop)
         self.private_queue = asyncio.Queue(loop=self.loop)
         self.stock_exchange = StockExchange(self.private_queue, self.public_queue)
+        self._logger = get_logger()
 
     @asyncio.coroutine
     def send_public(self):
@@ -48,8 +42,8 @@ class StockServer:
         self.send_public_coro = self.loop.create_task(self.send_public())
         self.send_private_coro = self.loop.create_task(self.send_private())
 
-        logging.info("Serving public on %s.", self.public_server.sockets[0].getsockname())
-        logging.info("Serving private on %s.", self.private_server.sockets[0].getsockname())
+        self._logger.info("Serving public on %s.", self.public_server.sockets[0].getsockname())
+        self._logger.info("Serving private on %s.", self.private_server.sockets[0].getsockname())
 
     def shutdown_tasks(self):
         self.public_server.close()
@@ -59,7 +53,7 @@ class StockServer:
         self.loop.run_until_complete(self.public_server.wait_closed())
         self.loop.run_until_complete(self.private_server.wait_closed())
         self.loop.close()
-        logging.info("Server shutdown.")
+        self._logger.info("Server shutdown.")
 
     def run(self):
         self.initialize_tasks()
@@ -73,6 +67,7 @@ class StockServer:
 class Clients:
     def __init__(self):
         self._clients = {}
+        self._logger = get_logger()
 
     def add(self, client):
         self._clients[client.peername] = client
@@ -85,7 +80,7 @@ class Clients:
             message = json.dumps(message)
         message = message + "\n"
         for participant, client in self._clients.items():
-            logging.debug("Broadcast %r to %s", message, participant)
+            self._logger.debug("Broadcast %r to %s", message, participant)
             client.transport.write(message.encode())
 
     def send(self, participant, message):
@@ -96,22 +91,23 @@ class Clients:
         if isinstance(message, dict):
             message = json.dumps(message)
         message = message + "\n"
-        logging.debug("Send %r to %s", message, participant)
+        self._logger.debug("Send %r to %s", message, participant)
         client.transport.write(message.encode())
 
 
 class PublicServerProtocol(asyncio.Protocol):
     def __init__(self, clients):
         self._clients = clients
+        self._logger = get_logger()
 
     def connection_made(self, transport):
         self.transport = transport
         self.peername = transport.get_extra_info("peername")
-        logging.debug("Connection made %s", self.peername)
+        self._logger.debug("Connection made %s", self.peername)
         self._clients.add(self)
 
     def connection_lost(self, exc):
-        logging.debug("Connection lost %s", self.peername)
+        self._logger.debug("Connection lost %s", self.peername)
         self._clients.remove(self)
 
 
@@ -122,5 +118,5 @@ class PrivateServerProtocol(PublicServerProtocol):
 
     def data_received(self, data):
         message = data.decode()
-        logging.debug("Received %r from %r" % (message, self.peername))
+        self._logger.debug("Received %r from %r" % (message, self.peername))
         self._stock_exchange.handle_order(message, self.peername)

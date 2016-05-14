@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 
-import logging
-
 import time
 from .priority_queue import MemoryPriorityQueue
 from collections import namedtuple
+from .utils import get_logger
 
 
 class BidOrder(namedtuple('BidOrder', 'order_id participant time price quantity')):
@@ -53,19 +52,20 @@ class LimitOrderBook:
         self.bid_queue = PriorityQueue()
         self.ask_queue = PriorityQueue()
         self.trades = []
+        self._logger = get_logger()
 
     def add(self, order):
         if isinstance(order, BidOrder):
             self.bid_queue.put(order)
         elif isinstance(order, AskOrder):
             self.ask_queue.put(order)
+        self._logger.info("Added new order %s", order, extra=order._asdict())
 
     def cancel(self, order_id):
         return self._cancel_from_queue(self.bid_queue, order_id) or self._cancel_from_queue(self.ask_queue, order_id)
 
-    @staticmethod
-    def _cancel_from_queue(queue, order_id):
-        logging.debug("Cancelling order %s", order_id)
+    def _cancel_from_queue(self, queue, order_id):
+        self._logger.debug("Cancelling order %s", order_id)
         order = queue.peek_by_id(order_id)
         if order is None:
             return False
@@ -103,16 +103,18 @@ class LimitOrderBook:
                 changed_ask_order = ask_order._replace(quantity=abs(quantity_difference))
                 self.ask_queue.put(changed_ask_order)
                 quantity = bid_order.quantity
-                logging.info("Reinsert %s as %s", ask_order, changed_ask_order)
+                self._logger.info("Reinsert %s as %s", ask_order, changed_ask_order)
             elif quantity_difference > 0:
                 changed_bid_order = bid_order._replace(quantity=quantity_difference)
                 self.bid_queue.put(changed_bid_order)
                 quantity = ask_order.quantity
-                logging.info("Reinsert %s as %s", bid_order, changed_bid_order)
+                self._logger.info("Reinsert %s as %s", bid_order, changed_bid_order)
             else:
                 quantity = bid_order.quantity
-            logging.info("Traded %s with %s", bid_order, ask_order)
             trade = Trade(time.time(), price, quantity, bid_order, ask_order)
+            self._logger.info("Traded %s with %s", bid_order, ask_order, extra={"bid": bid_order._asdict(),
+                                                                                "ask": ask_order._asdict(),
+                                                                                "price": price, "quantity": quantity})
             self.trades.append(trade)
             yield trade
 
