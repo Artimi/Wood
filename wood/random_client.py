@@ -4,13 +4,11 @@ import asyncio
 import argparse
 import json
 import random
-import logging
+import time
 
-LOGGING_PROPERTIES = {
-    "format": "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    "level": logging.DEBUG,
-}
-logging.basicConfig(**LOGGING_PROPERTIES)
+from .utils import get_logger
+
+logger = get_logger()
 
 MU = {
     "BUY": 95,
@@ -54,15 +52,18 @@ def get_order(order_id=1, side="BUY", price=100, quantity=100):
 
 @asyncio.coroutine
 async def client_task(client_id, host, port):
-    logging.info("Starting client #%s", client_id)
+    logger.info("Starting client #%s", client_id)
     reader, writer = await asyncio.open_connection(host, port)
     try:
         while True:
             order = generate_random_order()
             order_bytes = (order.encode() + b'\n')
-            logging.info("#%s: %s", client_id, order)
+            start = time.time()
             writer.write(order_bytes)
             await writer.drain()
+            await reader.read(1000)
+            duration = time.time() - start
+            logger.info("Client received response #%s: %s took %s s", client_id, order, duration, extra={"duration": duration})
             await asyncio.sleep(get_time_to_sleep())
     finally:
         writer.close()

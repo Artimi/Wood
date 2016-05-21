@@ -51,7 +51,6 @@ class LimitOrderBook:
     def __init__(self, PriorityQueue=MemoryPriorityQueue):
         self.bid_queue = PriorityQueue()
         self.ask_queue = PriorityQueue()
-        self.trades = []
         self._logger = get_logger()
 
     def add(self, order):
@@ -115,9 +114,7 @@ class LimitOrderBook:
             self._logger.info("Traded %s with %s", bid_order, ask_order, extra={"bid": bid_order._asdict(),
                                                                                 "ask": ask_order._asdict(),
                                                                                 "price": price, "quantity": quantity})
-            self.trades.append(trade)
             yield trade
 
     def __str__(self):
-        trades = "\n".join(map(str, self.trades))
-        return "BID\n{}\n\nASK\n{}\nTRADES\n{}".format(self.bid_queue, self.ask_queue, trades)
+        return "BID\n{}\n\nASK\n{}\n".format(self.bid_queue, self.ask_queue)

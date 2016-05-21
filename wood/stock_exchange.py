@@ -2,7 +2,6 @@
 import time
 import json
 from voluptuous import Schema, Any, Invalid, All, Range
-import logging
 
 from .limit_order_book import LimitOrderBook, BidOrder, AskOrder, MarketBidOrder, MarketAskOrder
 from .utils import get_logger
@@ -120,7 +119,6 @@ class StockExchange:
             ask_fill_report = self._get_fill_report(trade, trade.ask_order)
             self._private_queue.put_nowait((trade.ask_order.participant, ask_fill_report))
             self._public_queue.put_nowait(self._get_trade_report(trade))
-        self._logger.debug(self.limit_order_book)
 
     def _handle_cancel_order(self, order_dict, participant):
         if self.limit_order_book.cancel(order_dict["orderId"]):

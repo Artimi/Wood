@@ -20,13 +20,12 @@ def test_trade():
     a_order1 = get_ask_order(price=100, quantity=50)
     l.add(b_order1)
     l.add(a_order1)
-    for trade in l.check_trades():
-        pass
-    assert len(l.trades) == 1
-    assert l.trades[0].price == 100
-    assert l.trades[0].quantity == 50
-    assert l.trades[0].bid_order == b_order1
-    assert l.trades[0].ask_order == a_order1
+    trades = [trade for trade in l.check_trades()]
+    assert len(trades) == 1
+    assert trades[0].price == 100
+    assert trades[0].quantity == 50
+    assert trades[0].bid_order == b_order1
+    assert trades[0].ask_order == a_order1
     assert len(l.ask_queue) == 0
     assert len(l.bid_queue) == 0
 
@@ -37,13 +36,12 @@ def test_trade_higher_quantity_ask():
     a_order1 = get_ask_order(price=100, quantity=70)
     l.add(b_order1)
     l.add(a_order1)
-    for trade in l.check_trades():
-        pass
-    assert len(l.trades) == 1
-    assert l.trades[0].price == 100
-    assert l.trades[0].quantity == 50
-    assert l.trades[0].bid_order == b_order1
-    assert l.trades[0].ask_order == a_order1
+    trades = [trade for trade in l.check_trades()]
+    assert len(trades) == 1
+    assert trades[0].price == 100
+    assert trades[0].quantity == 50
+    assert trades[0].bid_order == b_order1
+    assert trades[0].ask_order == a_order1
     assert len(l.bid_queue) == 0
     assert len(l.ask_queue) == 1
     assert l.ask_queue.peek(0).quantity == 20
@@ -55,13 +53,12 @@ def test_trade_highest_price_bid():
     a_order1 = get_ask_order(price=100, quantity=50)
     l.add(b_order1)
     l.add(a_order1)
-    for trade in l.check_trades():
-        pass
-    assert len(l.trades) == 1
-    assert l.trades[0].price == 120
-    assert l.trades[0].quantity == 50
-    assert l.trades[0].bid_order == b_order1
-    assert l.trades[0].ask_order == a_order1
+    trades = [trade for trade in l.check_trades()]
+    assert len(trades) == 1
+    assert trades[0].price == 120
+    assert trades[0].quantity == 50
+    assert trades[0].bid_order == b_order1
+    assert trades[0].ask_order == a_order1
     assert len(l.bid_queue) == 0
     assert len(l.ask_queue) == 0
 
@@ -76,18 +73,17 @@ def test_trade_multiple_orders():
     l.add(b_order2)
     l.add(b_order3)
     l.add(a_order1)
-    for trade in l.check_trades():
-        pass
-    assert len(l.trades) == 3
+    trades = [trade for trade in l.check_trades()]
+    assert len(trades) == 3
 
-    assert l.trades[0].price == 120
-    assert l.trades[0].bid_order == b_order3
+    assert trades[0].price == 120
+    assert trades[0].bid_order == b_order3
 
-    assert l.trades[1].price == 110
-    assert l.trades[1].bid_order == b_order2
+    assert trades[1].price == 110
+    assert trades[1].bid_order == b_order2
 
-    assert l.trades[2].price == 100
-    assert l.trades[2].bid_order == b_order1
+    assert trades[2].price == 100
+    assert trades[2].bid_order == b_order1
 
     assert len(l.ask_queue) == 1
     assert l.ask_queue.peek(0).quantity == 50
@@ -110,14 +106,13 @@ def test_market_order():
     m_order = get_market_bid_order(order_id=2, quantity=150)
     l.add(a_order)
     l.add(m_order)
-    for trade in l.check_trades():
-        pass
+    trades = [trade for trade in l.check_trades()]
 
-    assert len(l.trades) == 1
-    assert l.trades[0].price == 100
-    assert l.trades[0].quantity == 100
-    assert l.trades[0].bid_order == m_order
-    assert l.trades[0].ask_order == a_order
+    assert len(trades) == 1
+    assert trades[0].price == 100
+    assert trades[0].quantity == 100
+    assert trades[0].bid_order == m_order
+    assert trades[0].ask_order == a_order
     assert len(l.bid_queue) == 1
     assert len(l.ask_queue) == 0
 
@@ -128,13 +123,12 @@ def test_two_market_orders():
     mb_order = get_market_bid_order(order_id=2, quantity=100)
     l.add(ma_order)
     l.add(mb_order)
-    for trade in l.check_trades():
-        pass
+    trades = [trade for trade in l.check_trades()]
 
-    assert len(l.trades) == 1
-    assert l.trades[0].price == 0
-    assert l.trades[0].quantity == 100
-    assert l.trades[0].bid_order == mb_order
-    assert l.trades[0].ask_order == ma_order
+    assert len(trades) == 1
+    assert trades[0].price == 0
+    assert trades[0].quantity == 100
+    assert trades[0].bid_order == mb_order
+    assert trades[0].ask_order == ma_order
     assert len(l.bid_queue) == 0
     assert len(l.ask_queue) == 0
