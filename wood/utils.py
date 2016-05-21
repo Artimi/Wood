@@ -1,7 +1,6 @@
-import asyncio
 import logging
-import graypy
 
+import graypy
 from functools import lru_cache
 
 from . import settings

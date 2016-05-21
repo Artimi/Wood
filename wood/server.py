@@ -61,7 +61,8 @@ class StockServer:
             self.loop.run_forever()
         except KeyboardInterrupt:
             pass
-        self.shutdown_tasks()
+        finally:
+            self.shutdown_tasks()
 
 
 class Clients:
