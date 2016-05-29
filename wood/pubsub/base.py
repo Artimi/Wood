@@ -5,7 +5,7 @@ import asyncio
 from abc import ABC, abstractmethod
 
 
-class BasePubSub(ABC):
+class BaseSubscriber(ABC):
     def __init__(self, loop):
         self.loop = loop
 
@@ -17,11 +17,22 @@ class BasePubSub(ABC):
     def unsubscribe(self, channel):
         pass
 
+    @asyncio.coroutine
+    @abstractmethod
+    async def get(self):
+        pass
+
+    def close(self):
+        pass
+
+
+class BasePublisher(ABC):
+    def __init__(self, loop):
+        self.loop = loop
+
     @abstractmethod
     def publish(self, channel, message):
         pass
 
-    @asyncio.coroutine
-    @abstractmethod
-    async def get(self):
+    def close(self):
         pass

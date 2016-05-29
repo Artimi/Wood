@@ -42,7 +42,7 @@ async def listen(port, loop, interface='127.0.0.1', messages=1, reader=None, wri
         reader, writer = await asyncio.open_connection(interface, port, loop=loop)
     data = True
     while data and counter < messages:
-        data = await reader.readline()
+        data = await asyncio.wait_for(reader.readline(), .1)
         counter += 1
         responses.append(json.loads(data.decode()))
     return responses

@@ -6,30 +6,34 @@ from functools import partial
 from .stock_exchange import StockExchange
 from .utils import get_logger
 from .clients import PrivateClients, PublicClients
-from .pubsub import AsyncioQueuePubsub
+from .pubsub import asyncio_queue_pubsub_factory, redis_pubsub_factory
 
 
 class StockServer:
     def __init__(self, private_port=7001, public_port=7002, loop=None):
         self.loop = asyncio.get_event_loop() if loop is None else loop
-        self.public_pubsub = AsyncioQueuePubsub(self.loop)
-        self.private_pubsub = AsyncioQueuePubsub(self.loop)
-        self.public_clients = PublicClients(self.public_pubsub)
-        self.private_clients = PrivateClients(self.private_pubsub)
+        self.public_subscriber, self.public_publisher = redis_pubsub_factory(self.loop)
+        self.private_subscriber, self.private_publisher = redis_pubsub_factory(self.loop)
+        self.public_clients = PublicClients(self.public_subscriber)
+        self.private_clients = PrivateClients(self.private_subscriber)
         self.public_port = public_port
         self.private_port = private_port
-        self.stock_exchange = StockExchange(self.private_pubsub, self.public_pubsub)
+        self.stock_exchange = StockExchange(self.private_publisher, self.public_publisher)
         self._logger = get_logger()
 
     def initialize_tasks(self):
-        public_protocol = partial(PublicServerProtocol, self.public_clients)
-        private_protocol = partial(PrivateServerProtocol, self.private_clients, self.stock_exchange)
+        public_protocol = partial(PublicServerProtocol, self.public_clients, self.loop)
+        private_protocol = partial(PrivateServerProtocol, self.private_clients, self.stock_exchange, self.loop)
         public_server_coro = self.loop.create_server(public_protocol, port=self.public_port)
         private_server_coro = self.loop.create_server(private_protocol, port=self.private_port)
         self.public_server = self.loop.run_until_complete(public_server_coro)
         self.private_server = self.loop.run_until_complete(private_server_coro)
-        self.send_public_coro = self.loop.create_task(self.public_clients.consume())
-        self.send_private_coro = self.loop.create_task(self.private_clients.consume())
+        self.loop.run_until_complete(self.public_subscriber.connect())
+        self.loop.run_until_complete(self.public_publisher.connect())
+        self.loop.run_until_complete(self.private_subscriber.connect())
+        self.loop.run_until_complete(self.private_publisher.connect())
+        self.public_clients_consume = self.loop.create_task(self.public_clients.consume())
+        self.private_clients_consume = self.loop.create_task(self.private_clients.consume())
 
         self._logger.info("Serving public on %s.", self.public_server.sockets[0].getsockname())
         self._logger.info("Serving private on %s.", self.private_server.sockets[0].getsockname())
@@ -37,8 +41,13 @@ class StockServer:
     def shutdown_tasks(self):
         self.public_server.close()
         self.private_server.close()
-        self.send_public_coro.cancel()
-        self.send_private_coro.cancel()
+
+        self.public_subscriber.close()
+        self.public_publisher.close()
+        self.private_subscriber.close()
+        self.private_publisher.close()
+        self.public_clients_consume.cancel()
+        self.private_clients_consume.cancel()
         self.loop.run_until_complete(self.public_server.wait_closed())
         self.loop.run_until_complete(self.private_server.wait_closed())
         self.loop.close()
@@ -53,10 +62,12 @@ class StockServer:
         finally:
             self.shutdown_tasks()
 
+
 class PublicServerProtocol(asyncio.Protocol):
-    def __init__(self, clients):
+    def __init__(self, clients, loop):
         self._clients = clients
         self._logger = get_logger()
+        self._loop = loop
 
     def connection_made(self, transport):
         self.transport = transport
@@ -70,11 +81,11 @@ class PublicServerProtocol(asyncio.Protocol):
 
 
 class PrivateServerProtocol(PublicServerProtocol):
-    def __init__(self, clients, stock_exchange):
-        super().__init__(clients)
+    def __init__(self, clients, stock_exchange, loop):
+        super().__init__(clients, loop)
         self._stock_exchange = stock_exchange
 
     def data_received(self, data):
         message = data.decode()
         self._logger.debug("Received %r from %r" % (message, self.peername))
-        self._stock_exchange.handle_order(message, self.peername)
+        asyncio.ensure_future(self._stock_exchange.handle_order(message, self.peername), loop=self._loop)
