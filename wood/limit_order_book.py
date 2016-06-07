@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import time
+import asyncio
+
 from .priority_queue import MemoryPriorityQueue
 from collections import namedtuple
 from .utils import get_logger
@@ -53,23 +55,26 @@ class LimitOrderBook:
         self.ask_queue = PriorityQueue()
         self._logger = get_logger()
 
-    def add(self, order):
+    @asyncio.coroutine
+    async def add(self, order):
         if isinstance(order, BidOrder):
-            self.bid_queue.put(order)
+            await self.bid_queue.put(order)
         elif isinstance(order, AskOrder):
-            self.ask_queue.put(order)
+            await self.ask_queue.put(order)
         self._logger.info("Added new order %s", order, extra=order._asdict())
 
-    def cancel(self, order_id):
-        return self._cancel_from_queue(self.bid_queue, order_id) or self._cancel_from_queue(self.ask_queue, order_id)
+    @asyncio.coroutine
+    async def cancel(self, order_id):
+        return await self._cancel_from_queue(self.bid_queue, order_id) or self._cancel_from_queue(self.ask_queue, order_id)
 
-    def _cancel_from_queue(self, queue, order_id):
+    @asyncio.coroutine
+    async def _cancel_from_queue(self, queue, order_id):
         self._logger.debug("Cancelling order %s", order_id)
-        order = queue.peek_by_id(order_id)
+        order = await queue.peek_by_id(order_id)
         if order is None:
             return False
         # Here could be some test to check that participant has right to cancel order
-        queue.remove(order)
+        await queue.remove(order)
         return True
 
     @staticmethod
@@ -90,22 +95,23 @@ class LimitOrderBook:
         else:
             return bid_order.price
 
-    def check_trades(self):
-        while not self.bid_queue.empty() and \
-              not self.ask_queue.empty() and \
-              self.can_trade(self.bid_queue.peek(0), self.ask_queue.peek(0)):
-            bid_order = self.bid_queue.get()
-            ask_order = self.ask_queue.get()
+    @asyncio.coroutine
+    async def check_trades(self):
+        trades = []
+        while not await self.bid_queue.empty() and not await self.ask_queue.empty() and \
+                self.can_trade(await self.bid_queue.peek(0), await self.ask_queue.peek(0)):
+            bid_order = await self.bid_queue.get()
+            ask_order = await self.ask_queue.get()
             price = self.get_price(bid_order, ask_order)
             quantity_difference = bid_order.quantity - ask_order.quantity
             if quantity_difference < 0:
                 changed_ask_order = ask_order._replace(quantity=abs(quantity_difference))
-                self.ask_queue.put(changed_ask_order)
+                await self.ask_queue.put(changed_ask_order)
                 quantity = bid_order.quantity
                 self._logger.info("Reinsert %s as %s", ask_order, changed_ask_order)
             elif quantity_difference > 0:
                 changed_bid_order = bid_order._replace(quantity=quantity_difference)
-                self.bid_queue.put(changed_bid_order)
+                await self.bid_queue.put(changed_bid_order)
                 quantity = ask_order.quantity
                 self._logger.info("Reinsert %s as %s", bid_order, changed_bid_order)
             else:
@@ -114,7 +120,8 @@ class LimitOrderBook:
             self._logger.info("Traded %s with %s", bid_order, ask_order, extra={"bid": bid_order._asdict(),
                                                                                 "ask": ask_order._asdict(),
                                                                                 "price": price, "quantity": quantity})
-            yield trade
+            trades.append(trade)
+        return trades
 
     def __str__(self):
         return "BID\n{}\n\nASK\n{}\n".format(self.bid_queue, self.ask_queue)

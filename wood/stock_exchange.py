@@ -109,14 +109,15 @@ class StockExchange:
     async def _handle_create_order(self, order_dict, participant):
         order = self.create_order(order_dict, participant)
         try:
-            self.limit_order_book.add(order)
+            await self.limit_order_book.add(order)
         except ValueError as e:
             await self._private_publisher.publish(participant, self._get_error_report(str(e)))
             return
         new_report = self._get_execution_report(order_dict["orderId"], "NEW")
         await self._private_publisher.publish(participant, new_report)
         await self._public_publisher.publish("public", self._get_order_book_report(order.side, order.price, order.quantity))
-        for trade in self.limit_order_book.check_trades():
+        trades = await self.limit_order_book.check_trades()
+        for trade in trades:
             bid_fill_report = self._get_fill_report(trade, trade.bid_order)
             await self._private_publisher.publish(trade.bid_order.participant, bid_fill_report)
             ask_fill_report = self._get_fill_report(trade, trade.ask_order)
@@ -125,7 +126,8 @@ class StockExchange:
 
     @asyncio.coroutine
     async def _handle_cancel_order(self, order_dict, participant):
-        if self.limit_order_book.cancel(order_dict["orderId"]):
+        cancelled = await self.limit_order_book.cancel(order_dict["orderId"])
+        if cancelled:
             cancel_report = self._get_execution_report(order_dict["orderId"], "CANCELLED")
             await self._private_publisher.publish(participant, cancel_report)
         else:
