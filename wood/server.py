@@ -10,10 +10,15 @@ from .pubsub import asyncio_queue_pubsub_factory, redis_pubsub_factory
 
 
 class StockServer:
-    def __init__(self, private_port=7001, public_port=7002, loop=None):
+    def __init__(self, private_port=7001, public_port=7002, loop=None, multiple_servers=False):
         self.loop = asyncio.get_event_loop() if loop is None else loop
-        self.public_subscriber, self.public_publisher = redis_pubsub_factory(self.loop)
-        self.private_subscriber, self.private_publisher = redis_pubsub_factory(self.loop)
+        self.mutliple_servers = multiple_servers
+        if self.mutliple_servers:
+            self.public_subscriber, self.public_publisher = redis_pubsub_factory(self.loop)
+            self.private_subscriber, self.private_publisher = redis_pubsub_factory(self.loop)
+        else:
+            self.public_subscriber, self.public_publisher = asyncio_queue_pubsub_factory(self.loop)
+            self.private_subscriber, self.private_publisher = asyncio_queue_pubsub_factory(self.loop)
         self.public_clients = PublicClients(self.public_subscriber)
         self.private_clients = PrivateClients(self.private_subscriber)
         self.public_port = public_port

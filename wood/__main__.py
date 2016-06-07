@@ -8,13 +8,21 @@ from .random_client import start_clients
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--server", default=False, action="store_true")
-    parser.add_argument("-c", "--client", default=False, action="store_true")
-    parser.add_argument("-n", "--number-of-clients", type=int, default=1)
+    server_group = parser.add_argument_group("server")
+    server_group.add_argument("-s", "--server", default=False, action="store_true")
+    server_group.add_argument("-m", "--multiple-servers", default=False, action="store_true")
+    server_group.add_argument("--private", default=7001, type=int)
+    server_group.add_argument("--public", default=7002, type=int)
+
+    client_group = parser.add_argument_group("client")
+    client_group.add_argument("-c", "--client", default=False, action="store_true")
+    client_group.add_argument("-n", "--number-of-clients", type=int, default=1)
     args = parser.parse_args()
 
     if args.server:
-        stock_server = StockServer()
+        stock_server = StockServer(private_port=args.private,
+                                   public_port=args.public,
+                                   multiple_servers=args.multiple_servers)
         stock_server.run()
     elif args.client:
         start_clients(args.number_of_clients)

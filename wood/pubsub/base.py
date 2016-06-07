@@ -9,6 +9,10 @@ class BaseSubscriber(ABC):
     def __init__(self, loop):
         self.loop = loop
 
+    @asyncio.coroutine
+    async def connect(self):
+        pass
+
     @abstractmethod
     def subscribe(self, channel):
         pass
@@ -29,6 +33,10 @@ class BaseSubscriber(ABC):
 class BasePublisher(ABC):
     def __init__(self, loop):
         self.loop = loop
+
+    @asyncio.coroutine
+    def connect(self):
+        pass
 
     @abstractmethod
     def publish(self, channel, message):

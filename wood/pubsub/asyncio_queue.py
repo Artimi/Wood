@@ -17,17 +17,20 @@ class AsyncioQueueSubscriber(BaseSubscriber):
         self._queue = queue
 
     def subscribe(self, channel):
-        self.subscribed.add(channel)
+        self.subscribed.add(str(channel))
 
     def unsubscribe(self, channel):
         try:
-            self.subscribed.remove(channel)
+            self.subscribed.remove(str(channel))
         except KeyError:
             pass
 
     @asyncio.coroutine
     async def get(self):
-        return await self._queue.get()
+        while True:
+            channel, message = await self._queue.get()
+            if channel in self.subscribed:
+                return channel, message
 
 
 class AsyncioQueuePublisher(BasePublisher):
@@ -35,5 +38,6 @@ class AsyncioQueuePublisher(BasePublisher):
         super().__init__(loop)
         self._queue = queue
 
-    def publish(self, channel, message):
-        self._queue.put_nowait((channel, message))
+    @asyncio.coroutine
+    async def publish(self, channel, message):
+        await self._queue.put((str(channel), message))
