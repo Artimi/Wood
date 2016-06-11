@@ -15,7 +15,6 @@ class RedisPriorityQueue(BasePriorityQueue):
         self.loop = loop
         self.reverse = reverse
         self.zset_name = str(uuid.uuid4()) if name is None else name
-        self._orders = {}
 
     def str_to_item(self, s):
         # http://nedbatchelder.com/blog/201206/eval_really_is_dangerous.html
@@ -33,10 +32,7 @@ class RedisPriorityQueue(BasePriorityQueue):
 
     @asyncio.coroutine
     async def put(self, item):
-        if item.order_id in self._orders:
-            raise ValueError("Order with order_id %s is already present in queue." % item.order_id)
         record = str(item)
-        self._orders[item.order_id] = item
         await self._redis.zadd(self.zset_name, {record: item.price})
 
     @asyncio.coroutine
@@ -61,21 +57,21 @@ class RedisPriorityQueue(BasePriorityQueue):
             # removal is not atomic so it may happen that somebody takes this before I can delete it
             if await self._redis.zrem(self.zset_name, [record]) == 1:
                 item = self.str_to_item(record)
-                del self._orders[item.order_id]
                 return item
 
     @asyncio.coroutine
     async def remove(self, item):
         record = str(item)
-        del self._orders[item.order_id]
         await self._redis.zrem(self.zset_name, [record])
 
     @asyncio.coroutine
     async def peek_by_id(self, order_id):
-        try:
-            return self._orders[order_id]
-        except KeyError:
-            return
+        records = await self._redis.zrange(self.zset_name, 0, -1)
+        records = await records.asdict()
+        for record in records.keys():
+            item = self.str_to_item(record)
+            if item.order_id == order_id:
+                return item
 
     @asyncio.coroutine
     async def cardinality(self):

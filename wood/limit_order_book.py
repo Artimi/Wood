@@ -11,9 +11,9 @@ from .utils import get_logger
 class LimitOrderBook:
     """ Structure that where matching of orders happens. """
     def __init__(self, loop, priority_queue=MemoryPriorityQueue):
-        self.bid_queue = priority_queue(loop, reverse=True)
+        self.bid_queue = priority_queue(loop, reverse=True, name="wood_bid_queue")
         loop.run_until_complete(self.bid_queue.connect())
-        self.ask_queue = priority_queue(loop)
+        self.ask_queue = priority_queue(loop, name="wood_ask_queue")
         loop.run_until_complete(self.ask_queue.connect())
         self._logger = get_logger()
 

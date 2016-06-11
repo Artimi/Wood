@@ -32,7 +32,7 @@ def test_get_lowest(event_loop, priority_queue):
 
 @pytest.mark.parametrize("priority_queue", [MemoryPriorityQueue, RedisPriorityQueue])
 # skip because redis cannot now pass this test
-@pytest.skip
+@pytest.mark.skip
 def test_get_lowest_time(event_loop, priority_queue):
     do = event_loop.run_until_complete
     q = priority_queue(event_loop, reverse=True)
@@ -90,6 +90,7 @@ def test_peek_by_id(event_loop, priority_queue):
 
 
 @pytest.mark.parametrize("priority_queue", [MemoryPriorityQueue, RedisPriorityQueue])
+@pytest.mark.skip
 def test_non_unique_order_id_raises_exception(event_loop, priority_queue):
     do = event_loop.run_until_complete
     q = priority_queue(event_loop, reverse=True)
