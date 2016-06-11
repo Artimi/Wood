@@ -5,6 +5,7 @@ import asyncio_redis
 import uuid
 from .base_priority_queue import BasePriorityQueue
 
+import wood.settings as settings
 from wood.orders import BidOrder, AskOrder, MarketBidOrder, MarketAskOrder
 
 
@@ -26,7 +27,9 @@ class RedisPriorityQueue(BasePriorityQueue):
 
     @asyncio.coroutine
     async def connect(self):
-        self._redis = await asyncio_redis.Connection.create(host='localhost', port=6379, loop=self.loop)
+        self._redis = await asyncio_redis.Connection.create(host=settings.redis["host"],
+                                                            port=settings.redis["port"],
+                                                            loop=self.loop)
 
     @asyncio.coroutine
     async def put(self, item):

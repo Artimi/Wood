@@ -17,6 +17,7 @@ if __name__ == '__main__':
     client_group = parser.add_argument_group("client")
     client_group.add_argument("-c", "--client", default=False, action="store_true")
     client_group.add_argument("-n", "--number-of-clients", type=int, default=1)
+    client_group.add_argument("-p", "--port", type=int, default=7001)
     args = parser.parse_args()
 
     if args.server:
@@ -25,4 +26,4 @@ if __name__ == '__main__':
                                    multiple_servers=args.multiple_servers)
         stock_server.run()
     elif args.client:
-        start_clients(args.number_of_clients)
+        start_clients(args.number_of_clients, port=args.port)
