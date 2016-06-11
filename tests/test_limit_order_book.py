@@ -7,7 +7,7 @@ from .utils import get_bid_order, get_ask_order, get_market_bid_order, get_marke
 
 def test_add(event_loop):
     do = event_loop.run_until_complete
-    l = LimitOrderBook()
+    l = LimitOrderBook(event_loop)
     b_order1 = get_bid_order(price=100)
     a_order1 = get_ask_order(price=200)
     do(l.add(b_order1))
@@ -20,7 +20,7 @@ def test_add(event_loop):
 
 def test_trade(event_loop):
     do = event_loop.run_until_complete
-    l = LimitOrderBook()
+    l = LimitOrderBook(event_loop)
     b_order1 = get_bid_order(price=100, quantity=50)
     a_order1 = get_ask_order(price=100, quantity=50)
     do(l.add(b_order1))
@@ -37,7 +37,7 @@ def test_trade(event_loop):
 
 def test_trade_higher_quantity_ask(event_loop):
     do = event_loop.run_until_complete
-    l = LimitOrderBook()
+    l = LimitOrderBook(event_loop)
     b_order1 = get_bid_order(price=100, quantity=50)
     a_order1 = get_ask_order(price=100, quantity=70)
     do(l.add(b_order1))
@@ -55,7 +55,7 @@ def test_trade_higher_quantity_ask(event_loop):
 
 def test_trade_highest_price_bid(event_loop):
     do = event_loop.run_until_complete
-    l = LimitOrderBook()
+    l = LimitOrderBook(event_loop)
     b_order1 = get_bid_order(price=120, quantity=50)
     a_order1 = get_ask_order(price=100, quantity=50)
     do(l.add(b_order1))
@@ -72,7 +72,7 @@ def test_trade_highest_price_bid(event_loop):
 
 def test_trade_multiple_orders(event_loop):
     do = event_loop.run_until_complete
-    l = LimitOrderBook()
+    l = LimitOrderBook(event_loop)
     b_order1 = get_bid_order(order_id=1, price=100, quantity=100)
     b_order2 = get_bid_order(order_id=2, price=110, quantity=50)
     b_order3 = get_bid_order(order_id=3, price=120, quantity=150)
@@ -100,7 +100,7 @@ def test_trade_multiple_orders(event_loop):
 
 def test_cancel_order(event_loop):
     do = event_loop.run_until_complete
-    l = LimitOrderBook()
+    l = LimitOrderBook(event_loop)
     b_order1 = get_bid_order(order_id=123)
     do(l.add(b_order1))
 
@@ -111,7 +111,7 @@ def test_cancel_order(event_loop):
 
 def test_market_order(event_loop):
     do = event_loop.run_until_complete
-    l = LimitOrderBook()
+    l = LimitOrderBook(event_loop)
     a_order = get_ask_order(quantity=100, price=100)
     m_order = get_market_bid_order(order_id=2, quantity=150)
     do(l.add(a_order))
@@ -129,7 +129,7 @@ def test_market_order(event_loop):
 
 def test_two_market_orders(event_loop):
     do = event_loop.run_until_complete
-    l = LimitOrderBook()
+    l = LimitOrderBook(event_loop)
     ma_order = get_market_ask_order(quantity=100)
     mb_order = get_market_bid_order(order_id=2, quantity=100)
     do(l.add(ma_order))

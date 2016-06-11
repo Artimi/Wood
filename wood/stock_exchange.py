@@ -4,7 +4,9 @@ import time
 import json
 from voluptuous import Schema, Any, Invalid, All, Range
 
-from .limit_order_book import LimitOrderBook, BidOrder, AskOrder, MarketBidOrder, MarketAskOrder
+from .priority_queue import MemoryPriorityQueue, RedisPriorityQueue
+from .limit_order_book import LimitOrderBook
+from wood.orders import BidOrder, AskOrder, MarketBidOrder, MarketAskOrder
 from .utils import get_logger
 
 
@@ -30,10 +32,11 @@ message_schema = Schema(Any(
 
 
 class StockExchange:
-    def __init__(self, private_publisher, public_publisher):
+    def __init__(self, private_publisher, public_publisher, loop, multiple_servers=False):
         self._private_publisher = private_publisher
         self._public_publisher = public_publisher
-        self.limit_order_book = LimitOrderBook()
+        priority_queue = RedisPriorityQueue if multiple_servers else MemoryPriorityQueue
+        self.limit_order_book = LimitOrderBook(loop, priority_queue)
         self._logger = get_logger()
 
     def create_order(self, order_dict, participant):
@@ -49,9 +52,9 @@ class StockExchange:
         }
         Order = order_types[order_dict["side"]][order_dict["message"]]
         price = -1 if order_dict["message"] == "marketOrder" else order_dict["price"]
-        return Order(order_dict["orderId"],
+        return Order(time.time(),
+                     order_dict["orderId"],
                      participant,
-                     time.time(),
                      price,
                      order_dict["quantity"])
 

@@ -23,7 +23,7 @@ class StockServer:
         self.private_clients = PrivateClients(self.private_subscriber)
         self.public_port = public_port
         self.private_port = private_port
-        self.stock_exchange = StockExchange(self.private_publisher, self.public_publisher)
+        self.stock_exchange = StockExchange(self.private_publisher, self.public_publisher, self.loop, multiple_servers)
         self._logger = get_logger()
 
     def initialize_tasks(self):

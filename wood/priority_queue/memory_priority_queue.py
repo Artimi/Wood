@@ -7,10 +7,14 @@ from tabulate import tabulate
 
 
 class MemoryPriorityQueue(BasePriorityQueue):
-    def __init__(self):
+    def __init__(self, *args, **kwargs):
         super().__init__()
         self._queue = queue.PriorityQueue()
         self._orders = {}
+
+    @asyncio.coroutine
+    async def connect(self):
+        pass
 
     @asyncio.coroutine
     def put(self, item):
@@ -31,6 +35,7 @@ class MemoryPriorityQueue(BasePriorityQueue):
 
     @asyncio.coroutine
     def remove(self, item):
+        del self._orders[item.order_id]
         self._queue.queue.remove(item)
 
     @asyncio.coroutine
@@ -43,6 +48,10 @@ class MemoryPriorityQueue(BasePriorityQueue):
     @asyncio.coroutine
     def empty(self):
         return self._queue.empty()
+
+    @asyncio.coroutine
+    async def cardinality(self):
+        return len(self)
 
     def __getattr__(self, item):
         return getattr(self._queue, item)
