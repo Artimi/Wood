@@ -7,6 +7,10 @@ from tabulate import tabulate
 
 
 class MemoryPriorityQueue(BasePriorityQueue):
+    """
+    Priority queue implemented using in memory queue from stdlib. It uses
+    method `__lt__` of each item to order them properly.
+    """
     def __init__(self, *args, **kwargs):
         super().__init__()
         self._queue = queue.PriorityQueue()
@@ -14,6 +18,7 @@ class MemoryPriorityQueue(BasePriorityQueue):
 
     @asyncio.coroutine
     async def connect(self):
+        """ Unnecessary method for keep interface"""
         pass
 
     @asyncio.coroutine

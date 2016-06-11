@@ -6,6 +6,7 @@ from abc import ABC, abstractmethod
 
 
 class BaseSubscriber(ABC):
+    """ Subscriber subscribes for certain channels and listen for incoming messages. """
     def __init__(self, loop):
         self.loop = loop
 
@@ -31,6 +32,7 @@ class BaseSubscriber(ABC):
 
 
 class BasePublisher(ABC):
+    """ Publisher publishes messages so subscriber can obtain them. """
     def __init__(self, loop):
         self.loop = loop
 

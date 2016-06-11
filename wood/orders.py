@@ -3,7 +3,10 @@ from collections import namedtuple
 
 
 class BidOrder(namedtuple('BidOrder', 'time order_id participant price quantity')):
-    """BUY Order"""
+    """
+    BUY Order. Namedtuple holding all information about bid order. It also
+    defines `__lt__` so it can implement price-time priority.
+    """
     __slots__ = ()
     side = "bid"
 
@@ -21,6 +24,7 @@ class AskOrder(namedtuple('AskOrder', 'time order_id participant price quantity'
 
 
 class MarketBidOrder(BidOrder):
+    """ `MarketBidOrder` edits order so it is always on top of priority queue. """
     def __lt__(self, other):
         if isinstance(other, MarketBidOrder):
             return self.time < other.time
@@ -37,6 +41,7 @@ class MarketAskOrder(AskOrder):
 
 
 class Trade(namedtuple('Trade', 'time price quantity bid_order ask_order')):
+    """ Namedtuple that holds all information about performed trade. """
     __slots__ = ()
 
     def __str__(self):

@@ -4,10 +4,15 @@ import asyncio
 import json
 
 from .utils import get_logger
+from .pubsub.base import BaseSubscriber
 
 
 class Clients:
-    def __init__(self, subscriber):
+    """
+    `Clients` are used as container for all connected clients and to send
+    messages to them.
+    """
+    def __init__(self, subscriber: BaseSubscriber):
         self._clients = {}
         self._logger = get_logger()
         self.subscriber = subscriber
@@ -18,7 +23,8 @@ class Clients:
     def remove(self, client):
         del self._clients[str(client.peername)]
 
-    def broadcast(self, message):
+    def broadcast(self, message: [str, dict]):
+        """Send `message` to all connected clients."""
         if isinstance(message, dict):
             message = json.dumps(message)
         message += "\n"
@@ -26,7 +32,7 @@ class Clients:
             self._logger.debug("Broadcast %r to %s", message, participant)
             client.transport.write(message.encode())
 
-    def send(self, participant, message):
+    def send(self, participant, message: [str, dict]):
         """
         Send message to participant. May raise `KeyError` if participant already left.
         """
@@ -39,6 +45,10 @@ class Clients:
 
 
 class PublicClients(Clients):
+    """
+    Public extension of `Clients` that listens via subscriber and then
+    broadcasts all incoming messages.
+    """
     @asyncio.coroutine
     async def consume(self):
         self.subscriber.subscribe("public")
@@ -48,6 +58,10 @@ class PublicClients(Clients):
 
 
 class PrivateClients(Clients):
+    """
+    Private extension of `Clients` that listens via subscriber and then
+    sends messages to corresponding clients.
+    """
     def add(self, client):
         super().add(client)
         self.subscriber.subscribe(str(client.peername))

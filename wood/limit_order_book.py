@@ -9,6 +9,7 @@ from .utils import get_logger
 
 
 class LimitOrderBook:
+    """ Structure that where matching of orders happens. """
     def __init__(self, loop, priority_queue=MemoryPriorityQueue):
         self.bid_queue = priority_queue(loop, reverse=True)
         loop.run_until_complete(self.bid_queue.connect())
@@ -18,6 +19,7 @@ class LimitOrderBook:
 
     @asyncio.coroutine
     async def add(self, order):
+        """ Add new order to limit order book. """
         if isinstance(order, BidOrder):
             await self.bid_queue.put(order)
         elif isinstance(order, AskOrder):
@@ -26,6 +28,7 @@ class LimitOrderBook:
 
     @asyncio.coroutine
     async def cancel(self, order_id):
+        """ Remove order with `order_id` from limit order book. """
         return await self._cancel_from_queue(self.bid_queue, order_id) or self._cancel_from_queue(self.ask_queue, order_id)
 
     @asyncio.coroutine
@@ -40,6 +43,7 @@ class LimitOrderBook:
 
     @staticmethod
     def can_trade(bid_order, ask_order):
+        """ Return True if `bid_order` and `ask_order` can be traded. """
         if isinstance(bid_order, MarketBidOrder) or isinstance(ask_order, MarketAskOrder):
             return True
         else:
@@ -47,6 +51,7 @@ class LimitOrderBook:
 
     @staticmethod
     def get_price(bid_order, ask_order):
+        """ Return price of trade between `bid_order` and `ask_order`. """
         if isinstance(bid_order, MarketBidOrder) and isinstance(ask_order, MarketAskOrder):
             return 0  # was not specified, participants exchange stock for free
         elif isinstance(bid_order, MarketBidOrder):
@@ -58,6 +63,7 @@ class LimitOrderBook:
 
     @asyncio.coroutine
     async def check_trades(self):
+        """ Main function that trades all orders until it cannot continue. """
         trades = []
         while not await self.bid_queue.empty() and not await self.ask_queue.empty() and \
                 self.can_trade(await self.bid_queue.peek(0), await self.ask_queue.peek(0)):

@@ -32,6 +32,11 @@ message_schema = Schema(Any(
 
 
 class StockExchange:
+    """
+    This class handles all interaction between `StockServer` and `LimitOrderBook`.
+    It validates incomming messages, adds new orders and performs trades. It also
+    reports results of such actions back to `StockServer` using publishers.
+    """
     def __init__(self, private_publisher, public_publisher, loop, multiple_servers=False):
         self._private_publisher = private_publisher
         self._public_publisher = public_publisher
@@ -99,7 +104,10 @@ class StockExchange:
         return json.dumps(result)
 
     @asyncio.coroutine
-    async def handle_order(self, message, participant):
+    async def handle_order(self, message: str, participant: tuple):
+        """
+        Handles incoming order, validate message, create new order or cancel existing.
+        """
         order_dict = await self.validate_message(message, participant)
         if order_dict is None:
             return
@@ -109,7 +117,10 @@ class StockExchange:
             await self._handle_cancel_order(order_dict, participant)
 
     @asyncio.coroutine
-    async def _handle_create_order(self, order_dict, participant):
+    async def _handle_create_order(self, order_dict: dict, participant: tuple):
+        """
+        Create new order, return execution report and try to match those orders in trades.
+        """
         order = self.create_order(order_dict, participant)
         try:
             await self.limit_order_book.add(order)
@@ -128,7 +139,10 @@ class StockExchange:
             await self._public_publisher.publish("public", self._get_trade_report(trade))
 
     @asyncio.coroutine
-    async def _handle_cancel_order(self, order_dict, participant):
+    async def _handle_cancel_order(self, order_dict: dict, participant: tuple):
+        """
+        Cancel order and report to client if order is in `LimitOrderBook`.
+        """
         cancelled = await self.limit_order_book.cancel(order_dict["orderId"])
         if cancelled:
             cancel_report = self._get_execution_report(order_dict["orderId"], "CANCELLED")
@@ -138,7 +152,10 @@ class StockExchange:
             await self._private_publisher.publish(participant, error_report)
 
     @asyncio.coroutine
-    async def validate_message(self, message, participant):
+    async def validate_message(self, message: str, participant: tuple):
+        """
+        Validates incoming message and possibly sends clients info about errors
+        """
         try:
             order_dict = json.loads(message)
         except ValueError:

@@ -12,6 +12,7 @@ def redis_pubsub_factory(loop):
 
 
 class RedisSubscriber(BaseSubscriber):
+    """ Subscriber that uses redis PubSub functionality. """
     def __init__(self, loop):
         super().__init__(loop)
         self.subscribed = set()
@@ -40,6 +41,7 @@ class RedisSubscriber(BaseSubscriber):
 
 
 class RedisPublisher(BasePublisher):
+    """ Publisher using Redis. """
     def __init__(self, loop):
         super().__init__(loop)
 

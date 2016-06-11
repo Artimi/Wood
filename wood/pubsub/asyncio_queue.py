@@ -11,6 +11,7 @@ def asyncio_queue_pubsub_factory(loop):
 
 
 class AsyncioQueueSubscriber(BaseSubscriber):
+    """ Asyncio subscriber that uses `asyncio.Queue` to transport messages. """
     def __init__(self, loop, queue):
         super().__init__(loop)
         self.subscribed = set()
@@ -34,6 +35,7 @@ class AsyncioQueueSubscriber(BaseSubscriber):
 
 
 class AsyncioQueuePublisher(BasePublisher):
+    """ Publisher using the same `asyncio.Queue` as subscriber. """
     def __init__(self, loop, queue):
         super().__init__(loop)
         self._queue = queue

@@ -10,6 +10,12 @@ from .pubsub import asyncio_queue_pubsub_factory, redis_pubsub_factory
 
 
 class StockServer:
+    """
+    Public and private server that handles client orders. Main class of this
+    program that uses all other parts. You can run it in `multiple_servers`
+    mode that uses redis publisher, subscriber and priority queue. Without
+    `multiple_servers` in memory solution is used.
+    """
     def __init__(self, private_port=7001, public_port=7002, loop=None, multiple_servers=False):
         self.loop = asyncio.get_event_loop() if loop is None else loop
         self.mutliple_servers = multiple_servers
@@ -27,6 +33,10 @@ class StockServer:
         self._logger = get_logger()
 
     def initialize_tasks(self):
+        """
+        Initialize all tasks that should be done (servers, consumers for client communication).
+        Connect to redis potentially.
+         """
         public_protocol = partial(PublicServerProtocol, self.public_clients, self.loop)
         private_protocol = partial(PrivateServerProtocol, self.private_clients, self.stock_exchange, self.loop)
         public_server_coro = self.loop.create_server(public_protocol, port=self.public_port)
@@ -44,6 +54,7 @@ class StockServer:
         self._logger.info("Serving private on %s.", self.private_server.sockets[0].getsockname())
 
     def shutdown_tasks(self):
+        """Clean up all running tasks, shutdown server."""
         self.public_server.close()
         self.private_server.close()
 
@@ -59,6 +70,7 @@ class StockServer:
         self._logger.info("Server shutdown.")
 
     def run(self):
+        """Run server and serve requests until `KeyboardInterrupt` is raised."""
         self.initialize_tasks()
         try:
             self.loop.run_forever()
@@ -69,7 +81,11 @@ class StockServer:
 
 
 class PublicServerProtocol(asyncio.Protocol):
-    def __init__(self, clients, loop):
+    """
+    Protocol that handles incoming and outcoming clients so app can send messages
+    to them later.
+    """
+    def __init__(self, clients: PublicClients, loop):
         self._clients = clients
         self._logger = get_logger()
         self._loop = loop
@@ -86,7 +102,11 @@ class PublicServerProtocol(asyncio.Protocol):
 
 
 class PrivateServerProtocol(PublicServerProtocol):
-    def __init__(self, clients, stock_exchange, loop):
+    """
+    Protocal for private server that differs only in that it handles incoming
+    requests too.
+    """
+    def __init__(self, clients: PrivateClients, stock_exchange: StockExchange, loop):
         super().__init__(clients, loop)
         self._stock_exchange = stock_exchange
 
