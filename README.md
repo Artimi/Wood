@@ -56,6 +56,10 @@ To check that everything is all right run:
 ```
 $ py.test
 ```
+To run tests also with redis run:
+```
+$ py.test --redis
+```
 
 ## Implementation
 Server was written in Python 3.5 with massive using of `asyncio`.

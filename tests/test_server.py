@@ -7,6 +7,10 @@ import pytest
 
 from wood.server import StockServer
 
+use_multiple_servers = [False]
+if pytest.config.getoption("--redis"):
+    use_multiple_servers.append(True)
+
 
 def get_create_order(order_id=1, side="BUY", price=100, quantity=100):
     return json.dumps({
@@ -18,7 +22,7 @@ def get_create_order(order_id=1, side="BUY", price=100, quantity=100):
     })
 
 
-@pytest.yield_fixture(params=[True, False])
+@pytest.yield_fixture(params=use_multiple_servers)
 def server(request, event_loop, unused_tcp_port_factory):
     _server = StockServer(public_port=unused_tcp_port_factory(),
                          private_port=unused_tcp_port_factory(),

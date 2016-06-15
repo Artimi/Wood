@@ -1,8 +1,12 @@
 # -*- coding: utf-8 -*-
 
+import pytest
 from wood.pubsub import redis_pubsub_factory
 
+use_redis = pytest.mark.skipif(not pytest.config.getoption("--redis"), reason="need --runslow option to run")
 
+
+@use_redis
 def test_redis_pubsub(event_loop):
     channel = '1'
     publish_message = 'Hello World!'
@@ -15,6 +19,7 @@ def test_redis_pubsub(event_loop):
     assert publish_message == response_message
 
 
+@use_redis
 def test_redis_dont_get_unsubscribed_messages(event_loop):
     subscriber, publisher = redis_pubsub_factory(event_loop)
     event_loop.run_until_complete(subscriber.connect())
@@ -26,6 +31,7 @@ def test_redis_dont_get_unsubscribed_messages(event_loop):
     assert "Message#2" == response_message
 
 
+@use_redis
 def test_redis_subscribe_to_multiple_channels(event_loop):
     subscriber, publisher = redis_pubsub_factory(event_loop)
     event_loop.run_until_complete(subscriber.connect())

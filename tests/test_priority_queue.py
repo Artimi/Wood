@@ -6,8 +6,12 @@ from wood.priority_queue import MemoryPriorityQueue
 from wood.priority_queue import RedisPriorityQueue
 from .utils import get_bid_order
 
+priority_queues = [MemoryPriorityQueue]
+if pytest.config.getoption("--redis"):
+    priority_queues.append(RedisPriorityQueue)
 
-@pytest.mark.parametrize("priority_queue", [MemoryPriorityQueue, RedisPriorityQueue])
+
+@pytest.mark.parametrize("priority_queue", priority_queues)
 def test_put(event_loop, priority_queue):
     do = event_loop.run_until_complete
     q = priority_queue(event_loop, reverse=True)
@@ -18,7 +22,7 @@ def test_put(event_loop, priority_queue):
     assert do(q.get()) == b_order
 
 
-@pytest.mark.parametrize("priority_queue", [MemoryPriorityQueue, RedisPriorityQueue])
+@pytest.mark.parametrize("priority_queue", priority_queues)
 def test_get_lowest(event_loop, priority_queue):
     do = event_loop.run_until_complete
     q = priority_queue(event_loop, reverse=True)
@@ -30,7 +34,7 @@ def test_get_lowest(event_loop, priority_queue):
     assert do(q.get()).order_id == 2
 
 
-@pytest.mark.parametrize("priority_queue", [MemoryPriorityQueue, RedisPriorityQueue])
+@pytest.mark.parametrize("priority_queue", priority_queues)
 def test_get_lowest_time(event_loop, priority_queue):
     do = event_loop.run_until_complete
     q = priority_queue(event_loop, reverse=True)
@@ -41,7 +45,7 @@ def test_get_lowest_time(event_loop, priority_queue):
     assert do(q.get()).order_id == 1
 
 
-@pytest.mark.parametrize("priority_queue", [MemoryPriorityQueue, RedisPriorityQueue])
+@pytest.mark.parametrize("priority_queue", priority_queues)
 def test_peek(event_loop, priority_queue):
     do = event_loop.run_until_complete
     q = priority_queue(event_loop, reverse=True)
@@ -55,7 +59,7 @@ def test_peek(event_loop, priority_queue):
     assert do(q.cardinality()) == 3
 
 
-@pytest.mark.parametrize("priority_queue", [MemoryPriorityQueue, RedisPriorityQueue])
+@pytest.mark.parametrize("priority_queue", priority_queues)
 def test_remove(event_loop, priority_queue):
     do = event_loop.run_until_complete
     q = priority_queue(event_loop, reverse=True)
@@ -74,7 +78,7 @@ def test_remove(event_loop, priority_queue):
     assert do(q.get()).order_id == 1
 
 
-@pytest.mark.parametrize("priority_queue", [MemoryPriorityQueue, RedisPriorityQueue])
+@pytest.mark.parametrize("priority_queue", priority_queues)
 def test_peek_by_id(event_loop, priority_queue):
     do = event_loop.run_until_complete
     q = priority_queue(event_loop, reverse=True)
