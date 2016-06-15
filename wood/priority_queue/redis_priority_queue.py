@@ -52,12 +52,16 @@ class RedisPriorityQueue(BasePriorityQueue):
             if self.reverse:
                 records = await self._redis.zrevrange(self.zset_name, 0, 0, withscores=True)
                 # records are list of [key1, score1, key2, score2, ...]
+                if len(records) == 0:
+                    return None
                 best_score = records[1]
                 records = await self._redis.zrangebyscore(self.zset_name, best_score, best_score)
                 # choose first because it has lowest time
                 record = records[0]
             else:
                 records = await self._redis.zrange(self.zset_name, 0, 0)
+                if len(records) == 0:
+                    return None
                 record = records[0]
             # removal is not atomic so it may happen that somebody takes this before I can delete it
             if await self._redis.zrem(self.zset_name, record) == 1:

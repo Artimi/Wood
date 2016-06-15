@@ -75,6 +75,8 @@ class LimitOrderBook:
                 self.can_trade(await self.bid_queue.peek(0), await self.ask_queue.peek(0)):
             bid_order = await self.bid_queue.get()
             ask_order = await self.ask_queue.get()
+            if bid_order is None or ask_order is None:
+                break
             price = self.get_price(bid_order, ask_order)
             quantity_difference = bid_order.quantity - ask_order.quantity
             if quantity_difference < 0:
