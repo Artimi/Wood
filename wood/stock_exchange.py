@@ -44,6 +44,10 @@ class StockExchange:
         self.limit_order_book = LimitOrderBook(loop, priority_queue)
         self._logger = get_logger()
 
+    @asyncio.coroutine
+    async def close(self):
+        await self.limit_order_book.close()
+
     def create_order(self, order_dict, participant):
         order_types = {
             "BUY": {

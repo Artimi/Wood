@@ -11,11 +11,16 @@ from .utils import get_logger
 class LimitOrderBook:
     """ Structure that where matching of orders happens. """
     def __init__(self, loop, priority_queue=MemoryPriorityQueue):
-        self.bid_queue = priority_queue(loop, reverse=True, name="wood_bid_queue")
+        self.bid_queue = priority_queue(loop, reverse=True)
         loop.run_until_complete(self.bid_queue.connect())
-        self.ask_queue = priority_queue(loop, name="wood_ask_queue")
+        self.ask_queue = priority_queue(loop)
         loop.run_until_complete(self.ask_queue.connect())
         self._logger = get_logger()
+
+    @asyncio.coroutine
+    async def close(self):
+        await self.bid_queue.close()
+        await self.ask_queue.close()
 
     @asyncio.coroutine
     async def add(self, order):
@@ -29,7 +34,9 @@ class LimitOrderBook:
     @asyncio.coroutine
     async def cancel(self, order_id):
         """ Remove order with `order_id` from limit order book. """
-        return await self._cancel_from_queue(self.bid_queue, order_id) or self._cancel_from_queue(self.ask_queue, order_id)
+        cancel_bid = await self._cancel_from_queue(self.bid_queue, order_id)
+        cancel_ask = await self._cancel_from_queue(self.ask_queue, order_id)
+        return cancel_bid or cancel_ask
 
     @asyncio.coroutine
     async def _cancel_from_queue(self, queue, order_id):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
-import asyncio_redis
+import aioredis
 import uuid
 from .base_priority_queue import BasePriorityQueue
 
@@ -26,14 +26,18 @@ class RedisPriorityQueue(BasePriorityQueue):
 
     @asyncio.coroutine
     async def connect(self):
-        self._redis = await asyncio_redis.Connection.create(host=settings.redis["host"],
-                                                            port=settings.redis["port"],
-                                                            loop=self.loop)
+        self._redis = await aioredis.create_redis((settings.redis["host"], settings.redis["port"]),
+                                                       loop=self.loop)
+
+    @asyncio.coroutine
+    async def close(self):
+        self._redis.close()
+        await self._redis.wait_closed()
 
     @asyncio.coroutine
     async def put(self, item):
         record = str(item)
-        await self._redis.zadd(self.zset_name, {record: item.price})
+        await self._redis.zadd(self.zset_name, item.price, record)
 
     @asyncio.coroutine
     async def peek(self, index):
@@ -41,37 +45,40 @@ class RedisPriorityQueue(BasePriorityQueue):
             records = await self._redis.zrevrange(self.zset_name, index, index)
         else:
             records = await self._redis.zrange(self.zset_name, index, index)
-        records = await records.asdict()
-        record = list(records.keys())[0]
-        return self.str_to_item(record)
+        return self.str_to_item(records[0])
 
     @asyncio.coroutine
     async def get(self):
         while True:
+            # reverse need a little hack because items
             if self.reverse:
-                records = await self._redis.zrevrange(self.zset_name, 0, 0)
+                records = await self._redis.zrevrange(self.zset_name, 0, 0, withscores=True)
+                # records are list of [key1, score1, key2, score2, ...]
+                best_score = records[1]
+                records = await self._redis.zrangebyscore(self.zset_name, best_score, best_score)
+                # choose first because it has lowest time
+                record = records[0]
             else:
                 records = await self._redis.zrange(self.zset_name, 0, 0)
-            records = await records.asdict()
-            record = list(records.keys())[0]
+                record = records[0]
             # removal is not atomic so it may happen that somebody takes this before I can delete it
-            if await self._redis.zrem(self.zset_name, [record]) == 1:
+            if await self._redis.zrem(self.zset_name, record) == 1:
                 item = self.str_to_item(record)
                 return item
 
     @asyncio.coroutine
     async def remove(self, item):
         record = str(item)
-        await self._redis.zrem(self.zset_name, [record])
+        await self._redis.zrem(self.zset_name, record)
 
     @asyncio.coroutine
     async def peek_by_id(self, order_id):
         records = await self._redis.zrange(self.zset_name, 0, -1)
-        records = await records.asdict()
-        for record in records.keys():
+        for record in records:
             item = self.str_to_item(record)
             if item.order_id == order_id:
                 return item
+        return None
 
     @asyncio.coroutine
     async def cardinality(self):
