@@ -27,12 +27,10 @@ class RedisPriorityQueue(BasePriorityQueue):
     @asyncio.coroutine
     async def connect(self):
         self._redis = await aioredis.create_redis((settings.redis["host"], settings.redis["port"]),
-                                                       loop=self.loop)
+                                                  loop=self.loop)
 
-    @asyncio.coroutine
-    async def close(self):
+    def close(self):
         self._redis.close()
-        await self._redis.wait_closed()
 
     @asyncio.coroutine
     async def put(self, item):

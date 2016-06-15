@@ -17,10 +17,9 @@ class LimitOrderBook:
         loop.run_until_complete(self.ask_queue.connect())
         self._logger = get_logger()
 
-    @asyncio.coroutine
-    async def close(self):
-        await self.bid_queue.close()
-        await self.ask_queue.close()
+    def close(self):
+        self.bid_queue.close()
+        self.ask_queue.close()
 
     @asyncio.coroutine
     async def add(self, order):

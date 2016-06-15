@@ -11,7 +11,6 @@ class BasePriorityQueue(abc.ABC):
     def __init__(self):
         pass
 
-    @asyncio.coroutine
     def close(self):
         """ Close potentional connection. """
         pass

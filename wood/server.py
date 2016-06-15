@@ -64,7 +64,7 @@ class StockServer:
         self.private_publisher.close()
         self.public_clients_consume.cancel()
         self.private_clients_consume.cancel()
-        self.loop.run_until_complete(self.stock_exchange.close())
+        self.stock_exchange.close()
         self.loop.run_until_complete(self.public_server.wait_closed())
         self.loop.run_until_complete(self.private_server.wait_closed())
         self.loop.close()

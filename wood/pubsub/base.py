@@ -27,6 +27,7 @@ class BaseSubscriber(ABC):
     async def get(self):
         pass
 
+    @asyncio.coroutine
     def close(self):
         pass
 

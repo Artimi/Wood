@@ -2,7 +2,7 @@
 
 import asyncio
 
-import asyncio_redis
+import aioredis
 
 import wood.settings as settings
 from .base import BasePublisher, BaseSubscriber
@@ -24,11 +24,11 @@ class RedisSubscriber(BaseSubscriber):
         Connect to redis and subscribe to everything. This is necessary because
         we need to subscribe to certain channel before we call `get`.
         """
-        self._connection = await asyncio_redis.Connection.create(host=settings.redis["host"],
-                                                                 port=settings.redis["port"],
-                                                                 loop=self.loop)
-        self._subscriber = await self._connection.start_subscribe()
-        await self._subscriber.psubscribe(["*"])
+        self._redis = await aioredis.create_redis((settings.redis["host"], settings.redis["port"]),
+                                                  loop=self.loop)
+        channels = await self._redis.psubscribe("*")
+        self._channel = channels[0]
+
 
     def subscribe(self, channel):
         self.subscribed.add(str(channel))
@@ -38,13 +38,15 @@ class RedisSubscriber(BaseSubscriber):
 
     @asyncio.coroutine
     async def get(self):
-        while True:
-            reply = await self._subscriber.next_published()
-            if reply.channel in self.subscribed:
-                return reply.channel, reply.value
+        async for reply in self._channel.iter():
+            channel, message = reply
+            channel = channel.decode()
+            message = message.decode()
+            if channel in self.subscribed:
+                return channel, message
 
     def close(self):
-        self._connection.close()
+        self._redis.close()
 
 
 class RedisPublisher(BasePublisher):
@@ -54,11 +56,12 @@ class RedisPublisher(BasePublisher):
 
     @asyncio.coroutine
     async def connect(self):
-        self._connection = await asyncio_redis.Connection.create(host='localhost', port=6379, loop=self.loop)
+        self._redis = await aioredis.create_redis((settings.redis["host"], settings.redis["port"]),
+                                                       loop=self.loop)
 
     @asyncio.coroutine
     async def publish(self, channel, message):
-        await self._connection.publish(str(channel), message)
+        await self._redis.publish(str(channel), message)
 
     def close(self):
-        self._connection.close()
+        self._redis.close()
