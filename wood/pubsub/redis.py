@@ -56,8 +56,7 @@ class RedisPublisher(BasePublisher):
 
     @asyncio.coroutine
     async def connect(self):
-        self._redis = await aioredis.create_redis((settings.redis["host"], settings.redis["port"]),
-                                                       loop=self.loop)
+        self._redis = await aioredis.create_redis((settings.redis["host"], settings.redis["port"]), loop=self.loop)
 
     @asyncio.coroutine
     async def publish(self, channel, message):

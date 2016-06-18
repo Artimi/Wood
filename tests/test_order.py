@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from .utils import get_ask_order, get_bid_order, get_market_ask_order, get_market_bid_order
+from .utils import get_ask_order, get_bid_order, get_market_bid_order
 
 
 def test_bid_order_comparison():

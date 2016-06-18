@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 
-import asyncio
 from wood.limit_order_book import LimitOrderBook
 from .utils import get_bid_order, get_ask_order, get_market_bid_order, get_market_ask_order
 

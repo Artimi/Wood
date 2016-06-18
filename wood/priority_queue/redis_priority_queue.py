@@ -18,7 +18,7 @@ class RedisPriorityQueue(BasePriorityQueue):
 
     def str_to_item(self, s):
         # http://nedbatchelder.com/blog/201206/eval_really_is_dangerous.html
-        # eval can be really dangerous but this is just toy application
+        # eval can be really dangerous but this is just a toy application
         return eval(s, {"AskOrder": AskOrder,
                         "BidOrder": BidOrder,
                         "MarketAskOrder": MarketAskOrder,
@@ -26,8 +26,7 @@ class RedisPriorityQueue(BasePriorityQueue):
 
     @asyncio.coroutine
     async def connect(self):
-        self._redis = await aioredis.create_redis((settings.redis["host"], settings.redis["port"]),
-                                                  loop=self.loop)
+        self._redis = await aioredis.create_redis((settings.redis["host"], settings.redis["port"]), loop=self.loop)
 
     def close(self):
         self._redis.close()

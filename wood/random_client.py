@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-random_client implement a client that makes periodic requests (with exponential distribution)
+random_client implements a client that makes periodic requests (with exponential distribution)
 to the server with random side and random price and quantity (normal distribution). It allows
 to run multiple clients at once.
 """

@@ -16,7 +16,7 @@ class StockServer:
     mode that uses redis publisher, subscriber and priority queue. Without
     `multiple_servers` in memory solution is used.
     """
-    def __init__(self, private_port=7001, public_port=7002, loop=None, multiple_servers=False):
+    def __init__(self, private_port=7001, public_port=7002, loop=None, multiple_servers=False, persist=False):
         self.loop = asyncio.get_event_loop() if loop is None else loop
         self.mutliple_servers = multiple_servers
         if self.mutliple_servers:
@@ -31,6 +31,7 @@ class StockServer:
         self.private_port = private_port
         self.stock_exchange = StockExchange(self.private_publisher, self.public_publisher, self.loop, multiple_servers)
         self._logger = get_logger()
+        self._persist = persist
 
     def initialize_tasks(self):
         """
@@ -58,6 +59,8 @@ class StockServer:
         self.public_server.close()
         self.private_server.close()
 
+        if self.mutliple_servers and not self._persist:
+            self.loop.run_until_complete(self.public_publisher._redis.flushdb())
         self.public_subscriber.close()
         self.public_publisher.close()
         self.private_subscriber.close()

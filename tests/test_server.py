@@ -25,9 +25,9 @@ def get_create_order(order_id=1, side="BUY", price=100, quantity=100):
 @pytest.yield_fixture(params=use_multiple_servers)
 def server(request, event_loop, unused_tcp_port_factory):
     _server = StockServer(public_port=unused_tcp_port_factory(),
-                         private_port=unused_tcp_port_factory(),
-                         loop=event_loop,
-                         multiple_servers=request.param)
+                          private_port=unused_tcp_port_factory(),
+                          loop=event_loop,
+                          multiple_servers=request.param)
     _server.initialize_tasks()
     yield _server
     _server.shutdown_tasks()

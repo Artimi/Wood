@@ -92,6 +92,7 @@ def test_peek_by_id(event_loop, priority_queue):
 
 
 @pytest.mark.parametrize("priority_queue", [MemoryPriorityQueue])
+# RedisPriorityQueue does not raise the exception
 def test_non_unique_order_id_raises_exception(event_loop, priority_queue):
     do = event_loop.run_until_complete
     q = priority_queue(event_loop, reverse=True)
