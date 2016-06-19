@@ -29,24 +29,27 @@ $ python -m wood -c -n 2
 
 To discover all settings call:
 ```
-$ python -m wood -h
-usage: __main__.py [-h] [-s] [-m] [--private PRIVATE] [--public PUBLIC] [-c]
-                   [-n NUMBER_OF_CLIENTS] [-p PORT]
+ python -m wood -h
+usage: __main__.py [-h] [-s] [-m] [--private PRIVATE] [--public PUBLIC]
+                   [--persist] [-c] [-n NUMBER_OF_CLIENTS] [-p PORT]
 
 optional arguments:
   -h, --help            show this help message and exit
 
 server:
-  -s, --server
+  -s, --server          Run server.
   -m, --multiple-servers
-  --private PRIVATE
-  --public PUBLIC
+                        Run multiple server environment (needs redis).
+  --private PRIVATE     Private port.
+  --public PUBLIC       Public port.
+  --persist             Whether to persist limit order book. Only for multiple
+                        server environment.
 
 client:
-  -c, --client
+  -c, --client          Run random client.
   -n NUMBER_OF_CLIENTS, --number-of-clients NUMBER_OF_CLIENTS
-  -p PORT, --port PORT
-
+                        Number of connected clients.
+  -p PORT, --port PORT  Private port of the server.
 ```
 
 To use in multiple environment (see chapter Implementation.Mutliple servers) you can use prepared haproxy configuration `haproxy.cfg` that will load balance between three servers. You need to run three servers (or more if you edit haproxy configuration) on ports 17001+17002, 17003+17004, 17005+17006:
@@ -58,7 +61,7 @@ To check that everything is all right run:
 ```
 $ py.test
 ```
-To run tests also in multiple server environment run:
+To run tests also in multiple server environment run (this command will erase redis data):
 ```
 $ py.test --redis
 ```
